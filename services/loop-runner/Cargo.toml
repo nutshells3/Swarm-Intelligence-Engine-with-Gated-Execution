@@ -1,0 +1,40 @@
+[package]
+name = "loop-runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "loop_runner"
+path = "src/lib.rs"
+
+[[bin]]
+name = "loop-runner"
+path = "src/main.rs"
+
+[dependencies]
+axum.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+state-model = { path = "../../packages/state-model" }
+user-policy = { path = "../../packages/user-policy" }
+planning-engine = { path = "../../packages/planning-engine" }
+control-plane = { path = "../../packages/control-plane", features = ["runtime"] }
+worker-protocol = { path = "../../packages/worker-protocol" }
+skill-registry = { path = "../../packages/skill-registry" }
+agent-adapters = { path = "../../packages/agent-adapters" }
+integration = { path = "../../packages/integration", features = ["sqlx"] }
+scaling = { path = "../../packages/scaling" }
+recursive-improvement = { path = "../../packages/recursive-improvement" }
+review-governance = { path = "../../packages/review-governance" }
+
+[dev-dependencies]
+scaling = { path = "../../packages/scaling" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

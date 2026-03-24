@@ -1,0 +1,22 @@
+[package]
+name = "integration"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[features]
+default = []
+sqlx = ["dep:sqlx", "dep:uuid"]
+
+[dependencies]
+chrono.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx = { workspace = true, optional = true }
+tokio = { version = "1", features = ["process", "time"] }
+tracing.workspace = true
+uuid = { workspace = true, optional = true }
+state-model = { path = "../state-model" }
+robustness-policy = { path = "../robustness-policy" }

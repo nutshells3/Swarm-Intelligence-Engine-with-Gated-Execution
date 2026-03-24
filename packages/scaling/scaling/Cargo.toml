@@ -1,0 +1,20 @@
+[package]
+name = "scaling"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "json"] }
+thiserror.workspace = true
+tokio = { version = "1", features = ["sync", "time", "process", "fs"] }
+tracing.workspace = true
+uuid.workspace = true
+toml.workspace = true
+
+[dependencies.git-control]
+path = "../git-control"

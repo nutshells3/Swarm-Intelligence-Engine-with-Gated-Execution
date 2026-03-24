@@ -1,0 +1,13 @@
+[package]
+name = "git-control"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio = { version = "1", features = ["process", "fs"] }
+tracing.workspace = true

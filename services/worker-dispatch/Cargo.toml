@@ -1,0 +1,30 @@
+[package]
+name = "worker-dispatch"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "worker-dispatch"
+path = "src/main.rs"
+
+[dependencies]
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "process", "fs", "time"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+state-model = { path = "../../packages/state-model" }
+user-policy = { path = "../../packages/user-policy" }
+worker-protocol = { path = "../../packages/worker-protocol" }
+agent-adapters = { path = "../../packages/agent-adapters" }
+git-control = { path = "../../packages/git-control" }
+control-plane = { path = "../../packages/control-plane" }
+scaling = { path = "../../packages/scaling" }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

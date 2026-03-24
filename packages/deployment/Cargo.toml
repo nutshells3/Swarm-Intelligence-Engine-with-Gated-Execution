@@ -1,0 +1,18 @@
+[package]
+name = "deployment"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono"] }
+thiserror.workspace = true
+tokio = { version = "1", features = ["sync"] }
+tracing.workspace = true
+integration = { path = "../integration" }

@@ -1,0 +1,15 @@
+target/
+.worktrees/
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+.tmp/
+*.lock
+.env
+*.stackdump
+*.db
+*.db-wal
+*.db-shm
+.data/

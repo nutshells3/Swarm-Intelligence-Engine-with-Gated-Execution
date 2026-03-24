@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Development Swarm IDE</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 {
+      color: #e94560;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .status {
+      color: #888;
+      font-size: 1.1rem;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #333;
+      border-top-color: #e94560;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Development Swarm IDE</h1>
+    <p class="status">
+      <span class="spinner"></span>
+      Starting API server on port 8845...
+    </p>
+  </div>
+  <script>
+    // Auto-redirect to API-served frontend once the embedded server is ready
+    async function checkApi() {
+      try {
+        const res = await fetch('http://127.0.0.1:8845/health');
+        if (res.ok) {
+          window.location.href = 'http://127.0.0.1:8845';
+          return;
+        }
+      } catch (e) {
+        // Server not ready yet
+      }
+      setTimeout(checkApi, 1000);
+    }
+    checkApi();
+  </script>
+</body>
+</html>

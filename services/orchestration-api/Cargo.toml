@@ -1,0 +1,40 @@
+[package]
+name = "orchestration-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "orchestration_api"
+path = "src/lib.rs"
+
+[[bin]]
+name = "orchestration-api"
+path = "src/main.rs"
+
+[dependencies]
+axum.workspace = true
+async-stream.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+utoipa.workspace = true
+utoipa-swagger-ui.workspace = true
+state-model = { path = "../../packages/state-model" }
+user-policy = { path = "../../packages/user-policy" }
+worker-protocol = { path = "../../packages/worker-protocol" }
+roadmap-model = { path = "../../packages/roadmap-model" }
+skill-registry = { path = "../../packages/skill-registry" }
+agent-adapters = { path = "../../packages/agent-adapters" }
+conversation-engine = { path = "../../packages/conversation-engine" }
+deployment = { path = "../../packages/deployment" }
+ui-models = { path = "../../packages/ui-models" }
+review-governance = { path = "../../packages/review-governance" }
