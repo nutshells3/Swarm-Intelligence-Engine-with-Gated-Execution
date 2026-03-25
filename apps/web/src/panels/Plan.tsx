@@ -84,7 +84,6 @@ export default function Plan() {
     <div className="panel">
       <h2>Plan & Gate</h2>
 
-      {/* Gate status */}
       {gateLoading && <p className="text-muted">Loading gate status...</p>}
       {gate && (
         <div className="gate-section">
@@ -131,7 +130,6 @@ export default function Plan() {
         </div>
       )}
 
-      {/* Milestones */}
       <h3>Milestones</h3>
       {msLoading && <p className="text-muted">Loading milestones...</p>}
       {milestones && milestones.length === 0 && (

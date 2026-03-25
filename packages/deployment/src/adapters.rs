@@ -25,8 +25,6 @@ pub struct RemoteTransportError {
     pub occurred_at: DateTime<Utc>,
 }
 
-// ── DEP-008: Remote certification adapter ───────────────────────────────
-
 /// Status of a remote certification request.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -144,8 +142,6 @@ pub async fn bridge_certify_via_gateway(
         },
     }
 }
-
-// ── DEP-009: Remote compile adapter ─────────────────────────────────────
 
 /// Status of a remote compile request.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]

@@ -15,8 +15,6 @@ use crate::adapter::{
 };
 use crate::normalize::{normalize_output, NormalizationPolicy, NormalizationResult};
 
-// ── Claude-specific config types (preserved from ADT-004/005) ────────────
-
 /// Claude-specific request configuration layered on top of AdapterInput.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClaudeRequestConfig {
@@ -62,8 +60,6 @@ pub struct ClaudeResponseMeta {
     /// Commands executed during the session (explicit audit trail).
     pub commands_executed: Vec<String>,
 }
-
-// ── Claude CLI Adapter ───────────────────────────────────────────────────
 
 /// Adapter that invokes the `claude` CLI (Claude Code) as a subprocess.
 pub struct ClaudeCliAdapter {
@@ -141,7 +137,7 @@ impl AgentAdapter for ClaudeCliAdapter {
         let task_id = request.task_id.clone();
         let policy = NormalizationPolicy::default();
 
-        // ADT-007: Up to 2 retries on empty output (3 total attempts).
+        // Up to 2 retries on empty output (3 total attempts).
         const MAX_RETRIES: u32 = 2;
 
         let mut stdout_raw = String::new();
@@ -160,7 +156,7 @@ impl AgentAdapter for ClaudeCliAdapter {
                     stdout_raw = stdout;
                     stderr_raw = stderr;
 
-                    // ADT-007: Check for is_error in JSON response.
+                    // Check for is_error in JSON response.
                     // Claude CLI returns exit code 0 even when credit is low
                     // or other errors occur, but sets is_error: true in JSON.
                     let json_is_error = serde_json::from_str::<serde_json::Value>(&stdout_raw)
@@ -279,5 +275,4 @@ impl AgentAdapter for ClaudeCliAdapter {
     }
 }
 
-// Legacy type alias for backward compatibility with existing imports.
 pub type ClaudeAdapter = ClaudeCliAdapter;

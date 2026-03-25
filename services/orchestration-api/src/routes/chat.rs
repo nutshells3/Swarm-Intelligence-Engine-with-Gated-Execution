@@ -8,8 +8,6 @@ use agent_adapters::adapter::{AdapterRequest, AdapterStatus};
 use crate::error::{ApiResult, bad_request, internal_error, not_found};
 use crate::state::AppState;
 
-// ── Request / Response types ────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateSessionRequest {
     pub objective_id: Option<String>,
@@ -60,8 +58,6 @@ pub struct ChatToTasksResponse {
     pub task_ids: Vec<String>,
     pub items_found: usize,
 }
-
-// ── Handlers ────────────────────────────────────────────────────────────
 
 /// POST /api/chat/sessions
 #[utoipa::path(
@@ -220,7 +216,7 @@ pub async fn get_chat_session(
 
 /// POST /api/chat/sessions/{id}/messages
 ///
-/// Gap 2: If the session has no linked objective AND this is the first
+/// If the session has no linked objective AND this is the first
 /// user message, auto-create an objective from the message content.
 #[utoipa::path(
     post,
@@ -285,7 +281,6 @@ pub async fn add_message(
         .await
         .map_err(internal_error)?;
 
-    // ── Gap 2: Chat-to-objective hook ────────────────────────────────
     // If session has no linked objective AND role is "user" AND this is
     // the first user message, auto-create an objective.
     if current_objective_id.is_none() && req.role == "user" {
@@ -368,11 +363,9 @@ pub async fn add_message(
         }
     }
 
-    // ── Mid-flight conversation absorption ──────────────────────────
-    // If session has a linked objective AND this is a user message:
-    // 1. Auto-extract constraints/decisions/questions from the message
-    // 2. Store as conversation_extract
-    // 3. Emit event so loop-runner can pick up changes on next tick
+    // If session has a linked objective AND this is a user message,
+    // auto-extract constraints/decisions/questions from the message,
+    // store as conversation_extract, and emit an event for loop-runner.
     if req.role == "user" {
         if let Some(ref obj_id) = objective_id_for_session {
             let constraints = extract_constraints(&content);
@@ -485,8 +478,6 @@ pub async fn list_messages(
 
     Ok(Json(results))
 }
-
-// ── Agent-based extraction types (CONV-005 ~ CONV-010) ──────────────
 
 /// JSON schema the agent is asked to return. Parsed with serde; on
 /// failure we fall back to keyword heuristic extraction.
@@ -606,19 +597,17 @@ fn parse_agent_response(raw: &str) -> Option<AgentExtractPayload> {
 
 /// POST /api/chat/sessions/{id}/extract
 ///
-/// CONV-005: Agent-based extraction with keyword-heuristic fallback.
+/// Agent-based extraction with keyword-heuristic fallback.
 /// Calls an agent adapter to summarize the conversation into structured
 /// JSON (constraints, decisions, open questions, backlog items).
 /// On adapter unavailability or parse failure, falls back to the
 /// original keyword heuristic.
 ///
-/// CONV-006~008: Parsed sections are inserted into conversation_extracts
+/// Parsed sections are inserted into conversation_extracts
 /// (extracted_constraints, extracted_decisions, extracted_open_questions).
+/// Backlog items from the agent response are stored in the extract payload.
 ///
-/// CONV-009: Backlog items from the agent response are stored in the
-/// extract payload.
-///
-/// CONV-010: If an active plan exists for the session's objective,
+/// If an active plan exists for the session's objective,
 /// constraints are inserted into plan_invariants and open questions
 /// into unresolved_questions.
 #[utoipa::path(
@@ -658,7 +647,6 @@ pub async fn extract_conversation(
         messages_for_prompt.push((role, content));
     }
 
-    // ── CONV-005: Attempt agent-based extraction ─────────────────────
     let agent_result: Option<AgentExtractPayload> = if let Some(adapter) =
         state.adapter_registry.select(None)
     {
@@ -709,16 +697,12 @@ pub async fn extract_conversation(
         None
     };
 
-    // ── Build the extract fields from agent result or keyword fallback ─
-
     let (summarized_intent, constraints_json, decisions_json, questions_json, backlog_json) =
         if let Some(agent_payload) = agent_result {
-            // CONV-005: Use agent-derived intent summary.
             let intent = agent_payload
                 .intent_summary
                 .unwrap_or_else(|| "Agent extraction (no explicit summary)".to_string());
 
-            // CONV-006: Build constraint objects.
             let constraints: Vec<serde_json::Value> = agent_payload
                 .constraints
                 .into_iter()
@@ -733,7 +717,6 @@ pub async fn extract_conversation(
                 })
                 .collect();
 
-            // CONV-007: Build decision objects.
             let decisions: Vec<serde_json::Value> = agent_payload
                 .decisions
                 .into_iter()
@@ -748,7 +731,6 @@ pub async fn extract_conversation(
                 })
                 .collect();
 
-            // CONV-008: Build open-question objects.
             let questions: Vec<serde_json::Value> = agent_payload
                 .open_questions
                 .into_iter()
@@ -763,7 +745,6 @@ pub async fn extract_conversation(
                 })
                 .collect();
 
-            // CONV-009: Build backlog draft items.
             let backlog: Vec<serde_json::Value> = agent_payload
                 .backlog_items
                 .into_iter()
@@ -786,7 +767,7 @@ pub async fn extract_conversation(
                 serde_json::Value::Array(backlog),
             )
         } else {
-            // ── Keyword heuristic fallback (original MVP logic) ──────
+            // Keyword heuristic fallback
             let mut constraints = Vec::new();
             let mut decisions = Vec::new();
             let mut open_questions = Vec::new();
@@ -874,8 +855,6 @@ pub async fn extract_conversation(
             )
         };
 
-    // ── Persist the extract ──────────────────────────────────────────
-
     let extract_id = Uuid::now_v7().to_string();
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
 
@@ -911,7 +890,6 @@ pub async fn extract_conversation(
     .await
     .map_err(internal_error)?;
 
-    // ── CONV-009: Persist backlog draft if items exist ────────────────
     if let Some(items) = backlog_json.as_array() {
         if !items.is_empty() {
             let backlog_id = Uuid::now_v7().to_string();
@@ -935,8 +913,8 @@ pub async fn extract_conversation(
         }
     }
 
-    // ── CONV-010: Plan update — propagate to plan_invariants / unresolved_questions ─
-    // Look up whether this session has a linked objective with an active plan.
+    // Propagate constraints/questions to plan_invariants/unresolved_questions
+    // if this session has a linked objective with an active plan.
     let session_row = sqlx::query(
         "SELECT objective_id FROM chat_sessions WHERE session_id = $1",
     )
@@ -1081,7 +1059,7 @@ pub async fn extract_conversation(
 
 /// POST /api/chat/sessions/{id}/to-tasks
 ///
-/// Gap 3: Parse conversation for actionable items and create tasks
+/// Parse conversation for actionable items and create tasks
 /// for the linked objective's nodes.
 #[utoipa::path(
     post,
@@ -1216,8 +1194,6 @@ pub async fn chat_to_tasks(
         items_found,
     }))
 }
-
-// ── Extraction helpers for mid-flight conversation absorption ────────
 
 const CONSTRAINT_KEYWORDS: &[&str] = &["must", "should", "require", "need to", "has to", "shall"];
 const DECISION_KEYWORDS: &[&str] = &[

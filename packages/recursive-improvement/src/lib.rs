@@ -1,17 +1,15 @@
-//! Recursive improvement (M7, REC-001 through REC-010).
+//! Recursive improvement.
 //!
 //! This crate provides the types and schemas for recursive
 //! self-improvement with strict safety gates, drift checks,
 //! anti-self-promotion, and durable memory.
 //!
 //! Key design rules:
-//! - Do not allow hidden self-modification (REC-002).
-//! - Do not let self-generated artifacts promote the same loop (REC-008, P0!).
-//! - Do not let recursive memory override current objectives (REC-010).
+//! - Do not allow hidden self-modification.
+//! - Do not let self-generated artifacts promote the same loop (P0!).
+//! - Do not let recursive memory override current objectives.
 //! - Every recursive action must leave a durable artifact (never_silent).
-//! - Drift checks detect semantic drift, not just file diffs (REC-007).
-//!
-//! Items: REC-001 through REC-010.
+//! - Drift checks detect semantic drift, not just file diffs.
 
 pub mod comparison;
 pub mod drift;

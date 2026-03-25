@@ -15,9 +15,7 @@ use crate::schemas::{ConditionEval, GateCondition, GateStatus, PlanGateDefinitio
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-// ─── PLAN-018: Plan completeness scoring ────────────────────────────────────
-
-/// PLAN-018 -- Completeness score for a plan.
+/// Completeness score for a plan.
 ///
 /// Each boolean field indicates whether the corresponding planning
 /// artifact is present and valid.  The `overall` score is the fraction
@@ -109,8 +107,6 @@ pub fn score_plan_completeness(gate: &PlanGateDefinition) -> CompletenessScore {
     }
 }
 
-// ─── PLAN-019: Plan validation failure reasons ──────────────────────────────
-
 /// Severity of a validation failure.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -130,7 +126,7 @@ impl fmt::Display for ValidationSeverity {
     }
 }
 
-/// PLAN-019 -- A single structured validation failure.
+/// A single structured validation failure.
 ///
 /// Each failure identifies the gate condition that failed, a
 /// human-readable reason, and a severity level.
@@ -267,9 +263,7 @@ fn reason_for(cond: GateCondition) -> String {
     }
 }
 
-// ─── PLAN-020: Dispatch gate check ──────────────────────────────────────────
-
-/// PLAN-020 -- Dispatch decision returned by the gate check.
+/// Dispatch decision returned by the gate check.
 ///
 /// This is the single enforcement point that prevents implementation
 /// dispatch from weak plans.
@@ -340,8 +334,6 @@ pub fn check_dispatch_gate(gate: &PlanGateDefinition) -> DispatchDecision {
     }
 }
 
-// ─── Tests ──────────────────────────────────────────────────────────────────
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -380,8 +372,6 @@ mod tests {
             evaluated_at: Utc::now(),
         }
     }
-
-    // ── PLAN-018 tests ──────────────────────────────────────────────────
 
     #[test]
     fn completeness_all_pass_yields_1_0() {
@@ -438,8 +428,6 @@ mod tests {
         assert!(!score.has_dependencies);
     }
 
-    // ── PLAN-019 tests ──────────────────────────────────────────────────
-
     #[test]
     fn validate_all_pass_returns_empty() {
         let gate = gate_with_all(ConditionEval::Pass, GateStatus::Satisfied);
@@ -483,8 +471,6 @@ mod tests {
             GateCondition::UnresolvedQuestionsBelowBudget
         );
     }
-
-    // ── PLAN-020 tests ──────────────────────────────────────────────────
 
     #[test]
     fn dispatch_allowed_when_all_pass() {

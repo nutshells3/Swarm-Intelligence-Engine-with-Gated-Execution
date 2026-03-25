@@ -14,8 +14,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── REC-004: Comparison baseline ─────────────────────────────────────────
-
 /// The baseline snapshot against which a self-improvement proposal is
 /// compared.  Must be captured before the improvement starts so the
 /// artifact is self-contained (CSV: reviewable without replaying).
@@ -57,7 +55,7 @@ pub struct RegressionRisk {
     pub blocks_integration: bool,
 }
 
-/// REC-004 -- Comparison artifact.
+/// Comparison artifact.
 ///
 /// A durable record comparing the previous state (baseline) with the
 /// proposed improvement.  Includes changed surfaces, metric deltas, and

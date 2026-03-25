@@ -29,7 +29,7 @@ use crate::spawn::PromptDeliveryMode;
 pub struct CustomCliAdapter {
     /// Absolute or PATH-relative path to the custom CLI binary.
     pub cli_path: String,
-    /// How the prompt is delivered to the CLI process (SPN-006).
+    /// How the prompt is delivered to the CLI process.
     pub prompt_delivery: PromptDeliveryMode,
 }
 
@@ -76,7 +76,7 @@ impl CustomCliAdapter {
 
     /// Run the CLI once, delivering the prompt according to `self.prompt_delivery`.
     ///
-    /// SPN-006 dispatch:
+    /// Dispatch by delivery mode:
     /// - `StdinPipe`:       pipe prompt to stdin (original behaviour).
     /// - `CommandLineArg`:  pass `--prompt "<prompt>"` on the command line.
     /// - `TempFile`:        write prompt to a temp file, pass `--prompt-file <path>`.
@@ -91,7 +91,7 @@ impl CustomCliAdapter {
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped());
 
-        // SPN-006: Prompt delivery mode handling.
+        // Prompt delivery mode handling.
         let _temp_file_guard: Option<tempfile::NamedTempFile>;
         match &self.prompt_delivery {
             PromptDeliveryMode::StdinPipe => {

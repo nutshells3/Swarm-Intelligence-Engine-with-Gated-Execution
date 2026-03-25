@@ -1,4 +1,4 @@
-//! Formal-claim gateway types (FCG-001 through FCG-003).
+//! Formal-claim gateway types.
 //!
 //! These types define the schemas for projecting correctness-critical outputs
 //! through the formal-claim boundary and ingesting returned gates back into
@@ -10,16 +10,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
-// ── FCG-001: Certification candidate schema ─────────────────────────────
-//
-// CSV guardrail: "Certification candidate schema that explicitly distinguishes
-//   what is eligible for slow-lane certification."
-//   gateway schema validation; submission replay check.
-// Acceptance: certification can be requested, recorded, returned, and
-//   projected into local state without creating a second canonical authority.
-// Caution: do not let local system reinterpret certification informally;
-//   gate and downstream admissibility must come from explicit projection law.
 
 /// Why a particular node/task is eligible for certification.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -35,7 +25,7 @@ pub enum CertificationEligibility {
     ConflictAdjudication,
 }
 
-/// FCG-001 -- Certification candidate.
+/// Certification candidate.
 ///
 /// Represents a node/task output that has been identified as eligible for
 /// formal-claim certification. The `source_anchors` field provides the
@@ -63,12 +53,6 @@ pub struct CertificationCandidate {
     pub created_at: DateTime<Utc>,
 }
 
-// ── FCG-002: Submission record schema ───────────────────────────────────
-//
-// CSV guardrail: "same submission key must not create duplicates."
-//   submission replay check.
-// Acceptance: idempotency is enforced by unique key.
-
 /// Queue status of a certification submission.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -87,7 +71,7 @@ pub enum SubmissionQueueStatus {
     Invalidated,
 }
 
-/// FCG-002 -- Certification submission record.
+/// Certification submission record.
 ///
 /// Tracks the lifecycle of a single submission to the formal-claim gateway.
 /// The `idempotency_key` prevents duplicate submissions per CSV
@@ -111,12 +95,6 @@ pub struct CertificationSubmission {
     /// When the queue status last changed.
     pub status_changed_at: DateTime<Utc>,
 }
-
-// ── FCG-003: Result projection schema ───────────────────────────────────
-//
-// CSV guardrail: "result projection simulation."
-//   "gate and downstream admissibility must come from explicit projection law."
-// Acceptance: projection into local state follows explicit gate effect.
 
 /// The effect a gateway result has on local state.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -152,7 +130,7 @@ pub enum LaneTransition {
     NoChange,
 }
 
-/// FCG-003 -- Certification result projection.
+/// Certification result projection.
 ///
 /// Maps an external gateway result into the local state model. The
 /// `external_gate` field carries the raw gate identifier returned by the

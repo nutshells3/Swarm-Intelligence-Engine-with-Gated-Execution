@@ -119,7 +119,7 @@ impl ScalingConfig {
 /// 2. `siege.toml` `[scaling]` section if the file exists
 /// 3. `ScalingConfig::default()` (standalone)
 ///
-/// SCL-007: All three env vars are consistent with `load_from_env()`.
+/// All three env vars are consistent with `load_from_env()`.
 /// The tier override was already present; NATS_URL and DB_POOL_SIZE
 /// are now applied here too so the two loading paths produce
 /// equivalent results when the same env vars are set.

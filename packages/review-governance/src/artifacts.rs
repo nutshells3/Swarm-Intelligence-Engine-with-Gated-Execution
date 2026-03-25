@@ -1,4 +1,4 @@
-//! Review artifact types (REV-001 through REV-003).
+//! Review artifact types.
 //!
 //! Key design rule: do not silently auto-approve without leaving a durable
 //! review artifact. Every review decision must be recorded as a first-class
@@ -6,17 +6,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
-// ── REV-001: Review artifact schema ─────────────────────────────────────
-//
-// CSV guardrail: "Define review artifact schema."
-//   "Do not silently auto-approve without leaving a durable review artifact."
-// Acceptance: every review produces a persistent, inspectable record.
-
-// ── REV-002: Review kinds enum ──────────────────────────────────────────
-//
-// CSV guardrail: "Define review kinds enum."
-// Acceptance: kinds are a typed enum, not a string.
 
 /// The kind of review being performed.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -33,11 +22,6 @@ pub enum ReviewKind {
     /// Review of implementation artifacts (code, config, etc.).
     Implementation,
 }
-
-// ── REV-003: Review status lifecycle ────────────────────────────────────
-//
-// CSV guardrail: "Define review status lifecycle."
-// Acceptance: lifecycle is a typed enum with explicit transitions.
 
 /// Lifecycle status of a review artifact.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -76,7 +60,7 @@ pub enum ReviewOutcome {
     Inconclusive,
 }
 
-/// REV-001 -- Review artifact record.
+/// Review artifact record.
 ///
 /// A durable, inspectable record of a review. Every review decision --
 /// including auto-approvals -- must produce one of these records.

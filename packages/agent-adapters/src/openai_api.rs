@@ -192,8 +192,6 @@ impl AgentAdapter for OpenAiApiAdapter {
     }
 }
 
-// ── Response parsing helpers ─────────────────────────────────────────────
-
 struct ParsedOpenAiResponse {
     text: String,
     usage: Option<TokenUsage>,

@@ -8,8 +8,6 @@ use uuid::Uuid;
 use crate::error::{ApiResult, internal_error, not_found};
 use crate::state::AppState;
 
-// ── Skill Packs ─────────────────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateSkillPackRequest {
     pub worker_role: String,
@@ -18,15 +16,15 @@ pub struct CreateSkillPackRequest {
     pub references: Value,
     pub scripts: Value,
     pub idempotency_key: String,
-    /// SKL-005: Optional expected output contract.
+    /// Optional expected output contract.
     #[serde(default)]
     pub expected_output_contract: Option<String>,
-    /// SKL-012: Optional semantic version.
+    /// Optional semantic version.
     #[serde(default)]
     pub version: Option<String>,
 }
 
-/// SKL-014: Response includes accepted_task_kinds, version, deprecated,
+/// Response includes accepted_task_kinds, version, deprecated,
 /// and expected_output_contract for UI projection.
 #[derive(Serialize, utoipa::ToSchema)]
 pub struct SkillPackResponse {
@@ -38,13 +36,13 @@ pub struct SkillPackResponse {
     pub scripts: Value,
     pub created_at: String,
     pub duplicated: bool,
-    /// SKL-005: Expected output contract shape.
+    /// Expected output contract shape.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expected_output_contract: Option<String>,
-    /// SKL-012: Semantic version of this skill pack.
+    /// Semantic version of this skill pack.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
-    /// SKL-013: Whether this skill pack is deprecated.
+    /// Whether this skill pack is deprecated.
     pub deprecated: bool,
 }
 
@@ -81,7 +79,7 @@ pub async fn create_skill_pack(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let skill_pack_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'skill_pack' and idempotency_key = $1 limit 1",
     )
@@ -205,8 +203,6 @@ pub async fn list_skill_packs(
     Ok(Json(results))
 }
 
-// ── Worker Templates ────────────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateWorkerTemplateRequest {
     pub role: String,
@@ -244,7 +240,7 @@ pub async fn create_worker_template(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let template_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'worker_template' and idempotency_key = $1 limit 1",
     )

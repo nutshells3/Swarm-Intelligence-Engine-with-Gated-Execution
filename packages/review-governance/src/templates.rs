@@ -1,5 +1,4 @@
-//! Review worker templates (REV-007 through REV-010) and UI/storage
-//! projections (REV-014 through REV-020).
+//! Review worker templates and UI/storage projections.
 //!
 //! Each review kind has an explicit worker template that defines what the
 //! review worker receives, what it must produce, and how results are
@@ -9,15 +8,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::artifacts::{ReviewKind, ReviewOutcome};
-
-// ── REV-007 through REV-010: Review worker templates ────────────────────
-//
-// CSV guardrails:
-//   REV-007: "Implement planning-review worker template."
-//   REV-008: "Implement architecture-review worker template."
-//   REV-009: "Implement direction-review worker template."
-//   REV-010: "Implement milestone-review worker template."
-// Acceptance: each review kind has an explicit, typed template.
 
 /// A review worker template defining the inputs, expected outputs, and
 /// integration rules for a specific review kind.
@@ -54,7 +44,7 @@ pub struct ReviewWorkerTemplate {
     pub created_at: DateTime<Utc>,
 }
 
-/// REV-007: Create the planning-review worker template.
+/// Create the planning-review worker template.
 ///
 /// Reviews the planning phase: objective clarity, milestone definitions,
 /// dependency correctness, and resource allocation.
@@ -88,7 +78,7 @@ pub fn planning_review_template() -> ReviewWorkerTemplate {
     }
 }
 
-/// REV-008: Create the architecture-review worker template.
+/// Create the architecture-review worker template.
 ///
 /// Reviews architecture drafts: structural soundness, abstraction boundaries,
 /// contract coverage, and scaling considerations.
@@ -122,7 +112,7 @@ pub fn architecture_review_template() -> ReviewWorkerTemplate {
     }
 }
 
-/// REV-009: Create the direction-review worker template.
+/// Create the direction-review worker template.
 ///
 /// Reviews development direction and strategic choices: alignment with
 /// objectives, trade-off justifications, and pivot criteria.
@@ -155,7 +145,7 @@ pub fn direction_review_template() -> ReviewWorkerTemplate {
     }
 }
 
-/// REV-010: Create the milestone-review worker template.
+/// Create the milestone-review worker template.
 ///
 /// Reviews a specific milestone's deliverables: completeness, acceptance
 /// criteria satisfaction, and quality thresholds.
@@ -213,11 +203,6 @@ pub fn template_for_kind(kind: ReviewKind) -> ReviewWorkerTemplate {
     }
 }
 
-// ── REV-014: Durable review storage ─────────────────────────────────────
-//
-// CSV guardrail: "Implement durable review storage."
-// Acceptance: reviews persist durably and are queryable.
-
 /// Storage metadata for a review artifact, tracking where it is persisted
 /// and how it can be retrieved.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -235,11 +220,6 @@ pub struct ReviewStorageRecord {
     /// When the review was stored.
     pub stored_at: DateTime<Utc>,
 }
-
-// ── REV-015: Dedicated review queue projection ──────────────────────────
-//
-// CSV guardrail: "Implement dedicated review queue projection."
-// Acceptance: review queue is a first-class projection surface.
 
 /// A single entry in the review queue, projected for UI consumption.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -262,14 +242,6 @@ pub struct ReviewQueueEntry {
     pub scheduled_at: DateTime<Utc>,
 }
 
-// ── REV-016 through REV-018: Review pages ───────────────────────────────
-//
-// CSV guardrails:
-//   REV-016: "Implement plan review page."
-//   REV-017: "Implement architecture review page."
-//   REV-018: "Implement development-direction review page."
-// Acceptance: each page type has a typed projection schema.
-
 /// Projection for a review page. The `page_kind` determines which
 /// review-specific data is included.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -291,12 +263,6 @@ pub struct ReviewPageProjection {
     /// Related review IDs (previous reviews of the same target).
     pub related_review_ids: Vec<String>,
 }
-
-// ── REV-019: Human digest summary ───────────────────────────────────────
-//
-// CSV guardrail: "Implement human digest summary for accumulated reviews."
-// Acceptance: digest is a concise summary so humans do not need to replay
-//   full context (CSV goal).
 
 /// A human-readable digest summarizing accumulated reviews for a target
 /// entity. This is the key artifact that prevents humans from needing
@@ -346,7 +312,7 @@ pub struct ReviewArtifactSummary {
     pub created_at: DateTime<Utc>,
 }
 
-/// REV-019: Generate a human-readable digest from multiple review artifacts.
+/// Generate a human-readable digest from multiple review artifacts.
 ///
 /// Consolidates findings, tallies outcomes, and collects outstanding
 /// conditions so that a human can understand the review history without
@@ -409,11 +375,6 @@ pub fn generate_review_digest(reviews: &[ReviewArtifactSummary]) -> String {
 
     digest
 }
-
-// ── REV-020: Review-to-plan-gate integration ────────────────────────────
-//
-// CSV guardrail: "Implement review-to-plan-gate integration."
-// Acceptance: review outcomes feed into plan gate evaluation.
 
 /// Describes how a review outcome affects the plan gate.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

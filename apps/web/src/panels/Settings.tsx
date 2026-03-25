@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { usePolicies, useUpdateCertificationConfig } from '../api/hooks';
 import type { PolicySnapshotResponse } from '../types/generated';
 
-// ---- Section: Policy Detail ----
-
 function PolicyDetail({ policy }: { policy: PolicySnapshotResponse }) {
   const payload = policy.policy_payload as Record<string, unknown> | null;
 
@@ -21,8 +19,6 @@ function PolicyDetail({ policy }: { policy: PolicySnapshotResponse }) {
     </div>
   );
 }
-
-// ---- Section: Certification Config Editor ----
 
 function CertificationConfigEditor() {
   const { data: policies } = usePolicies();
@@ -109,8 +105,6 @@ function CertificationConfigEditor() {
   );
 }
 
-// ---- Section: Policy Summary Table ----
-
 function PolicySummaryTable({ policies }: { policies: PolicySnapshotResponse[] }) {
   return (
     <div className="metric-card" style={{ marginBottom: 12 }}>
@@ -145,8 +139,6 @@ function PolicySummaryTable({ policies }: { policies: PolicySnapshotResponse[] }
     </div>
   );
 }
-
-// ---- Main Settings Panel ----
 
 export default function Settings() {
   const { data: policies, isLoading } = usePolicies();

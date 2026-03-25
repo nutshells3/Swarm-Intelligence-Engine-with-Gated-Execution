@@ -11,8 +11,6 @@
 
 use serde::{Deserialize, Serialize};
 
-// ── REC-003: Gate level lattice ──────────────────────────────────────────
-
 /// Gate levels for self-improvement, ordered from most restrictive to
 /// least restrictive.  Forms a lattice: a task at a lower level cannot
 /// escalate to a higher level without explicit approval.
@@ -65,7 +63,7 @@ pub struct AllowedActions {
     pub rollback_required: bool,
 }
 
-/// REC-003 -- Safety gate lattice configuration.
+/// Safety gate lattice configuration.
 ///
 /// Defines the gate level, conditions, and allowed actions for a
 /// self-improvement objective.  The lattice is evaluated before every

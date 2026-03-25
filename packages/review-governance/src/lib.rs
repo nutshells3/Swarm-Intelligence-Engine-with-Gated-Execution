@@ -1,4 +1,4 @@
-//! Review governance (REV-001 through REV-020).
+//! Review governance.
 //!
 //! This crate provides the types and schemas for scheduling and recording
 //! review artifacts so humans do not need to replay full context.
@@ -8,8 +8,6 @@
 //! - Every review produces an inspectable, persistent record.
 //! - Review scheduling is policy-driven, not ad hoc.
 //! - Human digest summaries consolidate accumulated reviews.
-//!
-//! Items: REV-001 through REV-020.
 
 pub mod artifacts;
 pub mod scheduling;

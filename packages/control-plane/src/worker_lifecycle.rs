@@ -12,11 +12,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── WRK-001: Worker state machine ────────────────────────────────────────
-//
-// Workers transition through a typed state machine. Every transition
-// is auditable and no implicit state changes are allowed.
-
 /// The lifecycle state of a registered worker.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -84,11 +79,7 @@ pub fn is_valid_transition(from: WorkerState, to: WorkerState) -> bool {
     valid_transitions().iter().any(|t| t.from == from && t.to == to)
 }
 
-// ── WRK-002: Worker registration ─────────────────────────────────────────
-//
-// Workers must explicitly register before receiving tasks.
-
-/// WRK-002 -- Registration record for a worker.
+/// Registration record for a worker.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerRegistration {
     /// Unique worker identifier.
@@ -113,12 +104,7 @@ pub struct WorkerRegistration {
     pub state_changed_at: DateTime<Utc>,
 }
 
-// ── WRK-003, WRK-004: Lease management ──────────────────────────────────
-//
-// Workers cannot run without an active lease. Leases have explicit
-// expiry times and must be renewed before they expire.
-
-/// WRK-003 -- Worker lease record.
+/// Worker lease record.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerLease {
     /// Unique lease identifier.
@@ -139,7 +125,7 @@ pub struct WorkerLease {
     pub max_renewals: u32,
 }
 
-/// WRK-004 -- Lease renewal request.
+/// Lease renewal request.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LeaseRenewalRequest {
     pub lease_id: String,
@@ -162,12 +148,7 @@ pub enum LeaseRenewalResult {
     InvalidWorkerState,
 }
 
-// ── WRK-005, WRK-006: Heartbeat management ──────────────────────────────
-//
-// Workers must send heartbeats at regular intervals. Missing heartbeats
-// trigger stuck-worker detection.
-
-/// WRK-005 -- Heartbeat record stored by the control plane.
+/// Heartbeat record stored by the control plane.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct HeartbeatRecord {
     /// Unique heartbeat identifier.
@@ -188,7 +169,7 @@ pub struct HeartbeatRecord {
     pub received_at: DateTime<Utc>,
 }
 
-/// WRK-006 -- Heartbeat policy defining expected intervals and thresholds.
+/// Heartbeat policy defining expected intervals and thresholds.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct HeartbeatPolicy {
     /// Expected interval between heartbeats in seconds.
@@ -212,13 +193,7 @@ impl Default for HeartbeatPolicy {
     }
 }
 
-// ── WRK-007, WRK-008: Stuck worker detection ────────────────────────────
-//
-// CSV guardrail: "stuck-worker detection simulation"
-// A worker is stuck if it has not sent a heartbeat within
-// (interval_seconds * missed_threshold) seconds.
-
-/// WRK-007 -- Stuck worker detection result.
+/// Stuck worker detection result.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StuckWorkerReport {
     /// Worker that is stuck.
@@ -235,7 +210,7 @@ pub struct StuckWorkerReport {
     pub action_taken: StuckWorkerAction,
 }
 
-/// WRK-008 -- Action taken when a stuck worker is detected.
+/// Action taken when a stuck worker is detected.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum StuckWorkerAction {
@@ -249,9 +224,7 @@ pub enum StuckWorkerAction {
     LeaseRevokedTaskRequeued,
 }
 
-// ── WRK-009, WRK-010: Task assignment and tracking ──────────────────────
-
-/// WRK-009 -- Task assignment binding a worker to a task.
+/// Task assignment binding a worker to a task.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskAssignment {
     /// Unique assignment identifier.
@@ -272,7 +245,7 @@ pub struct TaskAssignment {
     pub outcome: Option<TaskAssignmentOutcome>,
 }
 
-/// WRK-010 -- Outcome of a task assignment.
+/// Outcome of a task assignment.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskAssignmentOutcome {
@@ -292,9 +265,7 @@ pub enum TaskAssignmentOutcome {
     LeaseExpired,
 }
 
-// ── WRK-011, WRK-012: Cancel and kill flows ─────────────────────────────
-
-/// WRK-011 -- Cancel flow record.
+/// Cancel flow record.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CancelFlow {
     pub worker_id: String,
@@ -313,7 +284,7 @@ pub struct CancelFlow {
     pub escalated_to_kill: bool,
 }
 
-/// WRK-012 -- Kill flow record.
+/// Kill flow record.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct KillFlow {
     pub worker_id: String,
@@ -328,9 +299,7 @@ pub struct KillFlow {
     pub terminated_at: Option<DateTime<Utc>>,
 }
 
-// ── WRK-013, WRK-014: Retry management ──────────────────────────────────
-
-/// WRK-013 -- Retry policy for failed task assignments.
+/// Retry policy for failed task assignments.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerRetryPolicy {
     /// Maximum retry attempts.
@@ -360,7 +329,7 @@ impl Default for WorkerRetryPolicy {
     }
 }
 
-/// WRK-014 -- Retry decision made by the control plane.
+/// Retry decision made by the control plane.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RetryDecision {
     pub task_id: String,
@@ -374,9 +343,7 @@ pub struct RetryDecision {
     pub reason: String,
 }
 
-// ── WRK-015: Worker pool status ──────────────────────────────────────────
-
-/// WRK-015 -- Aggregate status of the worker pool.
+/// Aggregate status of the worker pool.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerPoolStatus {
     /// Total registered workers.

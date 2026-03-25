@@ -1,9 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-// ── SKL-001/002: ProviderMode re-export from worker-protocol ─────────────
-// The canonical enum lives in worker-protocol. We define a local mirror
-// for skill-registry consumers that don't pull in worker-protocol.
-
 /// Provider mode for task execution (mirrors worker_protocol::ProviderMode).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -43,8 +39,6 @@ pub struct ModelBinding {
     pub reasoning_effort: Option<String>,
 }
 
-// ── SKL-001~005: SkillPackManifest ───────────────────────────────────────
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SkillPackManifest {
     pub skill_pack_id: String,
@@ -53,33 +47,29 @@ pub struct SkillPackManifest {
     pub accepted_task_kinds: Vec<String>,
     pub references: Vec<String>,
     pub scripts: Vec<String>,
-    /// SKL-005: Contract describing the expected shape of worker output.
+    /// Contract describing the expected shape of worker output.
     #[serde(default)]
     pub expected_output_contract: Option<String>,
-    /// SKL-012: Semantic version pin for this skill pack.
+    /// Semantic version pin for this skill pack.
     #[serde(default)]
     pub version: Option<String>,
-    /// SKL-013: Soft deprecation flag. Deprecated packs are filtered from
+    /// Soft deprecation flag. Deprecated packs are filtered from
     /// resolution unless explicitly overridden.
     #[serde(default)]
     pub deprecated: bool,
 }
-
-// ── SKL-003/004: WorkerTemplate (typed fields) ──────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerTemplate {
     pub template_id: String,
     pub role: String,
     pub skill_pack_id: String,
-    /// SKL-004: Typed enum instead of bare String.
+    /// Typed enum instead of bare String.
     pub provider_mode: ProviderMode,
-    /// SKL-004: Typed struct instead of bare String.
+    /// Typed struct instead of bare String.
     pub model_binding: ModelBinding,
     pub allowed_task_kinds: Vec<String>,
 }
-
-// ── Skill pack row (database representation) ────────────────────────────
 
 /// Represents a row from the `skill_packs` database table, used as input
 /// for `SkillRegistryLoader::load_from_rows`.
@@ -98,8 +88,6 @@ pub struct SkillPackRow {
     #[serde(default)]
     pub deprecated: bool,
 }
-
-// ── Skill resolution types ──────────────────────────────────────────────
 
 /// The result of resolving a task to a skill pack.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -137,12 +125,10 @@ pub struct SkillValidationError {
     pub message: String,
 }
 
-// ── Skill registry loader ───────────────────────────────────────────────
-
 /// Loads, validates, and resolves skill packs.
 pub struct SkillRegistryLoader;
 
-/// SKL-007: Naming convention regex for skill_pack_id.
+/// Naming convention regex for skill_pack_id.
 /// Allowed: lowercase alphanumeric, hyphens, underscores. Must start with a letter.
 fn is_valid_skill_pack_id(id: &str) -> bool {
     if id.is_empty() {
@@ -173,7 +159,7 @@ impl SkillRegistryLoader {
             .collect()
     }
 
-    /// SKL-007: Validate a skill pack manifest, returning any errors found.
+    /// Validate a skill pack manifest, returning any errors found.
     /// Strengthened: checks accepted_task_kinds non-empty, worker_role non-empty,
     /// and skill_pack_id naming convention.
     pub fn validate(manifest: &SkillPackManifest) -> Vec<SkillValidationError> {
@@ -217,7 +203,7 @@ impl SkillRegistryLoader {
         errors
     }
 
-    /// SKL-008: Validate a worker template, returning any errors found.
+    /// Validate a worker template, returning any errors found.
     /// Checks: template_id non-empty, role non-empty, skill_pack_id references
     /// an existing skill pack.
     pub fn validate_template(
@@ -284,7 +270,7 @@ impl SkillRegistryLoader {
 
     /// Full resolution with an optional explicit task ID for per-task overrides.
     ///
-    /// SKL-013: Deprecated packs are excluded from levels 2-4 (task-kind,
+    /// Deprecated packs are excluded from levels 2-4 (task-kind,
     /// role, fallback). They can still be selected via explicit per-task
     /// overrides (level 1) to support migration scenarios.
     pub fn resolve_skill_with_task_id(
@@ -312,7 +298,7 @@ impl SkillRegistryLoader {
             }
         }
 
-        // SKL-013: For levels 2-4, exclude deprecated packs.
+        // For levels 2-4, exclude deprecated packs.
         let active: Vec<&SkillPackManifest> = available.iter().filter(|sp| !sp.deprecated).collect();
 
         // 2. Task-kind mapping: first check overrides keyed by task_kind,
@@ -380,7 +366,7 @@ impl SkillRegistryLoader {
     ///   7. global fallback
     ///   8. no-match -> escalation
     ///
-    /// SKL-013: Deprecated packs are excluded from levels 3-7. They can
+    /// Deprecated packs are excluded from levels 3-7. They can
     /// still be selected via explicit overrides (levels 1-2) to support
     /// migration scenarios.
     pub fn resolve_skill_full(
@@ -428,7 +414,7 @@ impl SkillRegistryLoader {
             }
         }
 
-        // SKL-013: For levels 3-7, exclude deprecated packs.
+        // For levels 3-7, exclude deprecated packs.
         let active: Vec<&SkillPackManifest> = available.iter().filter(|s| !s.deprecated).collect();
 
         // Level 3: task-kind mapping
@@ -909,8 +895,6 @@ mod tests {
         assert!(!manifests[0].deprecated);
     }
 
-    // ── SKL-008: Worker template validation ─────────────────────────────
-
     #[test]
     fn validate_template_catches_empty_fields() {
         let known = standard_available();
@@ -961,8 +945,6 @@ mod tests {
         let errors = SkillRegistryLoader::validate_template(&good, &known);
         assert!(errors.is_empty());
     }
-
-    // ── SKL-013: Deprecated packs filtered from resolution ──────────────
 
     #[test]
     fn deprecated_pack_excluded_from_task_kind_resolution() {

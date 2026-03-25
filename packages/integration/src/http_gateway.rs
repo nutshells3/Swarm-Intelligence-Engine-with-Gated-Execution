@@ -16,8 +16,6 @@ use tracing::debug;
 use crate::cli_gateway::GatewayError;
 use crate::gateway::GateEffect;
 
-// ── API result types ────────────────────────────────────────────────────
-
 /// Mirrors the Python `CertificationResult` returned by `POST /api/certify`.
 ///
 /// Carries the full OAE response: verdict, assurance profile, dual
@@ -58,7 +56,6 @@ pub struct CertificationApiResult {
     #[serde(default)]
     pub errors: Vec<String>,
 
-    // ── backward-compat fields (old "passed"/"failed" shape) ────────
     /// Legacy `outcome` field. When present and `verdict` is empty,
     /// `to_gate_effect()` falls back to this.
     #[serde(default, alias = "outcome")]
@@ -198,8 +195,6 @@ pub struct VerificationApiResult {
     pub duration_seconds: f64,
 }
 
-// ── Config loading ──────────────────────────────────────────────────────
-
 /// Retry policy parsed from `[retry.certification_transport]` in
 /// `verification.toml`.
 #[derive(Debug, Clone)]
@@ -252,8 +247,6 @@ fn load_gateway_config() -> HttpGatewayConfig {
     }
 }
 
-// ── Gateway mode ────────────────────────────────────────────────────────
-
 /// Selects the transport used by the orchestration layer to reach the
 /// formal-claim engine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -264,8 +257,6 @@ pub enum GatewayMode {
     /// Shell out to the `formal-claim` CLI (fallback).
     Cli,
 }
-
-// ── HTTP gateway ────────────────────────────────────────────────────────
 
 /// Gateway that calls the formal-claim HTTP API.
 pub struct HttpFormalClaimGateway {
@@ -303,8 +294,6 @@ impl HttpFormalClaimGateway {
             enabled: false,
         }
     }
-
-    // ── Retry helper ────────────────────────────────────────────────
 
     fn delay_for_attempt(&self, attempt: u32) -> Duration {
         let policy = &self.config.retry;
@@ -357,13 +346,9 @@ impl HttpFormalClaimGateway {
         Err(last_err)
     }
 
-    // ── HTTP helpers ────────────────────────────────────────────────
-
     fn url(&self, path: &str) -> String {
         format!("{}{path}", self.config.base_url)
     }
-
-    // ── Public API ──────────────────────────────────────────────────
 
     /// Check whether the engine is reachable.
     pub async fn health(&self) -> Result<bool, GatewayError> {

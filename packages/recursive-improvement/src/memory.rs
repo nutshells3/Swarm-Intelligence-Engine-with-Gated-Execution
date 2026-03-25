@@ -12,8 +12,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── REC-010: Memory entries and chains ───────────────────────────────────
-
 /// A single entry in the recursive memory store.
 /// Memory is append-only (CSV caution: must not override current objectives).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -83,7 +81,7 @@ pub struct LearningReinjection {
     pub created_at: DateTime<Utc>,
 }
 
-/// REC-010 -- Recursive memory.
+/// Recursive memory.
 ///
 /// Append-only memory store for recursive improvement loops.  Records
 /// prior objectives, outcomes, supersession chains, reuse signals, and

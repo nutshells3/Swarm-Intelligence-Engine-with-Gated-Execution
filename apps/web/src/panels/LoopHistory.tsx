@@ -4,8 +4,6 @@ import type {
   CycleResponse,
 } from '../types/generated';
 
-// ---- Section: Loop Row with Cycles ----
-
 function LoopRow({ loop, cycles }: { loop: LoopResponse; cycles: CycleResponse[] }) {
   const loopCycles = cycles.filter((c) => c.loop_id === loop.loop_id);
 
@@ -60,8 +58,6 @@ function LoopRow({ loop, cycles }: { loop: LoopResponse; cycles: CycleResponse[]
   );
 }
 
-// ---- Helpers ----
-
 function phaseColor(phase: string): string {
   if (phase === 'next_cycle_ready' || phase === 'state_update') return '#22c55e';
   if (phase === 'execution' || phase === 'dispatch') return '#3b82f6';
@@ -72,8 +68,6 @@ function phaseColor(phase: string): string {
   if (phase.includes('fail') || phase.includes('error')) return '#ef4444';
   return '#6b7280';
 }
-
-// ---- Main Loop History Panel ----
 
 export default function LoopHistory() {
   const { data: loops, isLoading: loopsLoading } = useLoops();

@@ -5,16 +5,8 @@
 //! failure mode covered here is bounded by explicit policy so the control plane
 //! can enforce it uniformly.
 //!
-//! Items: ROB-001 through ROB-020.
 
 use serde::{Deserialize, Serialize};
-
-// ── ROB-001: Malformed-output taxonomy ──────────────────────────────────
-//
-// CSV guardrail: "Malformed-output taxonomy covering empty output,
-//   almost-JSON, mixed prose+JSON, and structurally invalid payloads."
-// Acceptance: taxonomy is explicit, machine-readable, and enforced by
-//   the control plane.
 
 /// Classifies the kind of malformed output received from an AI worker.
 ///
@@ -47,12 +39,6 @@ pub enum MalformedOutputKind {
     MixedProseAndJson,
 }
 
-// ── ROB-002: Structured-output preference policy ────────────────────────
-//
-// CSV guardrail: "strict structured output preferred; one fuzzy repair
-//   pass allowed; escalate after repeated malformed planning output."
-// Acceptance: policy is explicit enum, machine-readable.
-
 /// Determines how strictly the control plane enforces structured output
 /// conformance.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -65,12 +51,6 @@ pub enum OutputPreference {
     /// Best-effort extraction; log the deviation but do not block.
     Lenient,
 }
-
-// ── ROB-003: Fuzzy JSON repair rules ────────────────────────────────────
-//
-// CSV guardrail: "Fuzzy JSON repair rules bounded enough not to invent
-//   meaning."  "one bounded repair pass then fail or escalate."
-// Acceptance: repair operations are enumerated; attempt count is bounded.
 
 /// An individual repair operation the fuzzy-repair pass is allowed to
 /// perform. Each operation is syntactic; none may invent or infer
@@ -105,12 +85,6 @@ pub struct FuzzyRepairPolicy {
     pub allowed_operations: Vec<RepairOperation>,
 }
 
-// ── ROB-004: Bounded parse retry rules ──────────────────────────────────
-//
-// CSV guardrail: "define explicit recovery rather than relying on blind
-//   retry."
-// Acceptance: retry count, backoff, and escalation are all explicit.
-
 /// Strategy for delaying between retry attempts.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -139,12 +113,6 @@ pub struct ParseRetryPolicy {
     pub escalation_action: EscalationAction,
 }
 
-// ── ROB-005: Parse-failure fallback policy ──────────────────────────────
-//
-// CSV guardrail: "define explicit recovery rather than relying on blind
-//   retry."
-// Acceptance: fallback action is a typed enum, not a string.
-
 /// The action the control plane takes when a parse failure persists after
 /// all retries (ROB-004) are exhausted.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -171,14 +139,6 @@ pub struct ParseFailureFallbackPolicy {
     /// Fallback for tasks classified as non-critical.
     pub non_critical_task_fallback: ParseFailureFallback,
 }
-
-// ── ROB-006: Context budget policy by task class ────────────────────────
-//
-// CSV guardrail: "Context budget policy by task class so larger projects
-//   do not collapse from context overload."
-//   "task-class specific budget with top-k retrieval and summary
-//   preference."
-// Acceptance: budgets are per-task-class, machine-readable.
 
 /// The class of task, used to key context budget limits.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -215,12 +175,6 @@ pub struct ContextBudgetPolicy {
     pub max_context_items: u32,
 }
 
-// ── ROB-007: Retrieval ranking policy for context selection ─────────────
-//
-// CSV guardrail: "must always prefer bounded retrieval over full-history
-//   expansion."
-// Acceptance: ranking dimensions are typed enum, weights are explicit.
-
 /// A dimension used to rank retrieved context items.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -253,12 +207,6 @@ pub struct RetrievalRankingPolicy {
     pub max_retrieved_items: u32,
 }
 
-// ── ROB-008: Summary-artifact preference rules ──────────────────────────
-//
-// CSV guardrail: "must always prefer bounded retrieval over full-history
-//   expansion."
-// Acceptance: preference is a typed enum; threshold is explicit.
-
 /// When to prefer a summary artifact over the raw source artifact.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -282,13 +230,6 @@ pub struct SummaryArtifactPolicy {
     /// the default preference setting.
     pub summary_threshold_tokens: u32,
 }
-
-// ── ROB-009: Direct-dependency context expansion rules ──────────────────
-//
-// CSV guardrail: "must always prefer bounded retrieval over full-history
-//   expansion."  "use affected files, changed symbols, and direct
-//   dependents only."
-// Acceptance: expansion depth is capped; types of expansion are typed.
 
 /// How far context expansion may follow dependency edges.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -314,12 +255,6 @@ pub struct DependencyExpansionPolicy {
     /// Maximum number of expanded artifacts added to context.
     pub max_expanded_items: u32,
 }
-
-// ── ROB-010: Full-history denial rules ──────────────────────────────────
-//
-// CSV guardrail: "must always prefer bounded retrieval over full-history
-//   expansion."  "forbid full-history expansion."
-// Acceptance: denial is unconditional and machine-readable.
 
 /// Modes of history access. The control plane uses this to enforce that
 /// full-history dumps are never assembled.
@@ -347,12 +282,6 @@ pub struct FullHistoryDenialPolicy {
     /// attempted.
     pub log_denied_attempts: bool,
 }
-
-// ── ROB-011: Planning iteration cap schema ──────────────────────────────
-//
-// CSV guardrail: "Planning iteration cap schema that prevents infinite
-//   refinement loops."  "defines the planning cap itself."
-// Acceptance: caps are numeric, escalation is typed.
 
 /// What happens when a planning or question budget is exhausted.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -382,13 +311,6 @@ pub struct PlanningIterationCap {
     pub escalation_action: EscalationAction,
 }
 
-// ── ROB-012: Unresolved-question budget schema ──────────────────────────
-//
-// CSV guardrail: "Unresolved-question budget schema used to trigger
-//   escalation before endless planning."
-//   "defines unresolved-question exhaustion threshold."
-// Acceptance: budget is numeric, escalation is typed.
-
 /// Budget for unresolved questions during a planning phase. When the
 /// count exceeds the budget, the control plane triggers escalation
 /// rather than allowing the planning loop to continue.
@@ -399,14 +321,6 @@ pub struct UnresolvedQuestionBudget {
     /// What to do when the budget is exceeded.
     pub escalation_action: EscalationAction,
 }
-
-// ── ROB-013: Planning bailout escalation rules ──────────────────────────
-//
-// CSV guardrail: "Bailout escalation rules that route planning deadlocks
-//   into review or human escalation."
-//   auto_approval_policy: "never" -- human review is mandatory once
-//   bailout threshold is hit.
-// Acceptance: trigger conditions and escalation targets are typed.
 
 /// A condition that can trigger a planning bailout.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -452,13 +366,6 @@ pub struct PlanningBailoutPolicy {
     pub snapshot_before_bailout: bool,
 }
 
-// ── ROB-014: Graded certification gate lattice ──────────────────────────
-//
-// CSV guardrail (M3/M5): "Graded certification gate lattice so useful
-//   outcomes do not collapse into one blocked bucket."
-//   "gate-lattice simulation; downstream admissibility matrix check."
-// Acceptance: gate grades are typed enum; lattice ordering is explicit.
-
 /// A certification grade returned by the formal-claim gateway or a
 /// local reviewer. Grades form a lattice from strongest (Proven) to
 /// weakest (Rejected).
@@ -502,12 +409,6 @@ pub struct GateLattice {
     pub ordering: Vec<GateLatticeEntry>,
 }
 
-// ── ROB-015: Graded downstream admissibility rules ──────────────────────
-//
-// CSV guardrail (M3/M5): "Downstream admissibility rules tied to the
-//   graded gate lattice."
-// Acceptance: admissibility is per-action, keyed by grade.
-
 /// An action that depends on certification grade to proceed.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -541,15 +442,6 @@ pub struct DownstreamAdmissibilityPolicy {
     /// at most once.
     pub rules: Vec<AdmissibilityRule>,
 }
-
-// ── ROB-016: Symbol-level overlap detection rules ───────────────────────
-//
-// CSV guardrail (M3): "Symbol-level overlap detection rules for semantic
-//   conflict pre-screening."
-//   "symbol overlap simulation; changed-symbol impact check."
-//   context_selection: "use affected files, changed symbols, and direct
-//   dependents only."
-// Acceptance: overlap categories and thresholds are typed.
 
 /// The kind of symbol overlap detected between two concurrent changes.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -597,15 +489,6 @@ pub struct SymbolOverlapPolicy {
     pub escalate_on_blocking: bool,
 }
 
-// ── ROB-017: Semantic conflict trigger rules ────────────────────────────
-//
-// CSV guardrail (M3/M5): "Semantic conflict trigger rules for cases
-//   where merge is syntactically clean but semantically unsafe."
-//   "post-merge semantic validation simulation; claim-impact conflict
-//   simulation."
-// Acceptance: trigger conditions are typed; conflict is a first-class
-//   object.
-
 /// A condition that fires a semantic conflict even though the syntactic
 /// merge succeeded.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -644,17 +527,6 @@ pub struct SemanticConflictRule {
 pub struct SemanticConflictTriggerPolicy {
     pub rules: Vec<SemanticConflictRule>,
 }
-
-// ── ROB-018: Semantic conflict artifact schema ──────────────────────────
-//
-// CSV guardrail (M5): "Semantic conflict artifact schema that survives
-//   beyond plain merge warnings."
-//   "same semantic conflict trigger on same artifact set should not
-//   create duplicates."
-//   "Keep semantic conflict history even after resolution for future
-//   drift analysis."
-// Acceptance: conflict is a first-class, deduplicated, persistent
-//   record.
 
 /// Lifecycle state of a semantic conflict artifact.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -707,13 +579,6 @@ pub struct SemanticConflictArtifact {
     pub resolution_summary: Option<String>,
 }
 
-// ── ROB-019: Provisional retention window policy ────────────────────────
-//
-// CSV guardrail (M6): "Define provisional retention windows."
-// Caution: "Do not archive artifacts still needed for unresolved
-//   conflicts or active review."
-// Acceptance: schema validation.
-
 /// The scope of artifacts a retention window applies to.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -763,13 +628,6 @@ pub struct RetentionWindowPolicy {
     pub exceptions: Vec<RetentionException>,
 }
 
-// ── ROB-020: Archive and compaction policy ──────────────────────────────
-//
-// CSV guardrail (M6): "Define archive/compaction policy."
-// Caution: "Do not archive artifacts still needed for unresolved
-//   conflicts or active review."
-// Acceptance: schema validation.
-
 /// A class of artifact eligible for compression during archival.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -817,11 +675,6 @@ pub struct ArchiveRebuildEntry {
     pub kind: CompressibleArtifactKind,
     pub rule: RebuildRule,
 }
-
-// ── Enforcement functions (Tier 3) ──────────────────────────────────────
-//
-// Pure functions that apply robustness policy to concrete inputs.
-// No I/O -- callers supply the values.
 
 /// Result of checking input tokens against a context budget.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -912,8 +765,6 @@ pub fn timeout_from_policy(policy: &ParseRetryPolicy) -> u64 {
 pub fn retry_budget_from_policy(policy: &ParseRetryPolicy) -> u32 {
     policy.max_attempts
 }
-
-// ── Aggregate policy snapshot ───────────────────────────────────────────
 
 /// Top-level robustness policy snapshot aggregating all ROB-001..ROB-020
 /// sub-policies. Serializable for storage, versioning, and control-plane

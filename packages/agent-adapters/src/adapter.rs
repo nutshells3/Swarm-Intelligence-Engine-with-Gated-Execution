@@ -10,8 +10,6 @@
 
 use serde::{Deserialize, Serialize};
 
-// ── Adapter contract types ───────────────────────────────────────────────
-
 /// The kind of external agent being adapted.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -94,8 +92,6 @@ pub enum AdapterErrorKind {
     /// Unknown or unclassified error.
     Unknown,
 }
-
-// ── Unified async adapter types ──────────────────────────────────────────
 
 /// Unified request sent to any adapter (CLI or API).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,7 +182,7 @@ pub struct AdapterProvenance {
     pub finished_at: String,
 }
 
-/// ADT-001 -- The core async adapter trait that all external agent adapters implement.
+/// The core async adapter trait that all external agent adapters implement.
 ///
 /// Implementors wrap a specific external agent (Codex, Claude, APIs, etc.) and
 /// enforce the governance contract:

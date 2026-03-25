@@ -1,4 +1,4 @@
-//! Integration package -- Formal-Claim Gateway (FCG-001 to FCG-015).
+//! Integration package -- Formal-Claim Gateway.
 //!
 //! This crate provides the types and schemas for projecting
 //! correctness-critical outputs through the formal-claim boundary and
@@ -12,8 +12,6 @@
 //! - Malformed external payloads must fail explicitly or be normalized
 //!   under bounded rules.
 //! - Stale certifications must be explicitly invalidated, never silently kept.
-//!
-//! Items: FCG-001 through FCG-015.
 
 pub mod certification;
 pub mod cli_gateway;
@@ -41,13 +39,6 @@ pub use http_gateway::{
     DualFormalizationResult, GatewayMode, HttpFormalClaimGateway, VerificationApiResult,
     VerificationDetail,
 };
-
-// ── FCG-015: UI projection for certification state ──────────────────────
-//
-// CSV guardrail: "UI projection for certification state."
-//   projection_effect: "certification queue; branch/mainline panel;
-//   task readiness; review queue."
-// Acceptance: projection types are explicit for each UI surface.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

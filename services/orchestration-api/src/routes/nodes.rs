@@ -7,8 +7,6 @@ use uuid::Uuid;
 use crate::error::{ApiResult, internal_error, not_found};
 use crate::state::AppState;
 
-// ── Nodes ───────────────────────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateNodeRequest {
     pub objective_id: String,
@@ -46,7 +44,7 @@ pub async fn create_node(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let node_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'node' and idempotency_key = $1 limit 1",
     )
@@ -214,8 +212,6 @@ pub async fn list_nodes(
     Ok(Json(results))
 }
 
-// ── Node Edges ──────────────────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateNodeEdgeRequest {
     pub from_node_id: String,
@@ -248,7 +244,7 @@ pub async fn create_node_edge(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let edge_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'node_edge' and idempotency_key = $1 limit 1",
     )

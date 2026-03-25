@@ -132,8 +132,6 @@ fn _assert_auto_approval_shape(t: &AutoApprovalThreshold) -> bool {
 pub async fn tick(pool: &PgPool, scaling: &ScalingContext) -> Result<u32, Box<dyn std::error::Error>> {
     let mut actions = 0u32;
 
-    // ── OBS-008: Session heartbeat log ───────────────────────────────────
-    //
     // At the START of each tick, record a heartbeat into event_journal with
     // aggregate_kind='tick_heartbeat'. The tick_number is derived from the
     // count of previous heartbeat events (monotonically increasing).
@@ -265,8 +263,6 @@ pub async fn tick(pool: &PgPool, scaling: &ScalingContext) -> Result<u32, Box<dy
     Ok(actions)
 }
 
-// ── Step 1: Create loops for objectives that don't have one ──────────────
-
 /// Find objectives that don't yet have a loop and create one for each.
 ///
 /// The idempotency key is derived from the objective_id so that
@@ -293,7 +289,7 @@ async fn create_loops_for_new_objectives(
 
         let mut tx = pool.begin().await?;
 
-        // BND-010: scoped idempotency check
+        // Scoped idempotency check
         let existing: Option<String> = sqlx::query_scalar(
             "SELECT aggregate_id FROM event_journal
              WHERE aggregate_kind = 'loop' AND idempotency_key = $1 LIMIT 1",
@@ -346,8 +342,6 @@ async fn create_loops_for_new_objectives(
     Ok(count)
 }
 
-// ── Step 2: Create cycles for active loops ───────────────────────────────
-
 /// Find loops whose last cycle is completed (NextCycleReady) or that have
 /// no cycle at all, and create a new cycle in `intake` phase.
 ///
@@ -382,7 +376,7 @@ async fn create_cycles_for_active_loops(
 
         let mut tx = pool.begin().await?;
 
-        // BND-010: scoped idempotency check
+        // Scoped idempotency check
         let existing: Option<String> = sqlx::query_scalar(
             "SELECT aggregate_id FROM event_journal
              WHERE aggregate_kind = 'cycle' AND idempotency_key = $1 LIMIT 1",
@@ -468,8 +462,6 @@ async fn create_cycles_for_active_loops(
     Ok(count)
 }
 
-// ── Step 3: Advance intake cycles ────────────────────────────────────────
-
 /// Cycles in `intake` phase are automatically advanced to `plan_elaboration`.
 ///
 /// In a full system, intake would involve conversation extraction first.
@@ -495,7 +487,7 @@ async fn advance_intake_cycles(
 
         let mut tx = pool.begin().await?;
 
-        // BND-010: scoped idempotency check
+        // Scoped idempotency check
         let existing: Option<String> = sqlx::query_scalar(
             "SELECT aggregate_id FROM event_journal
              WHERE aggregate_kind = 'cycle' AND idempotency_key = $1 LIMIT 1",
@@ -552,8 +544,6 @@ async fn advance_intake_cycles(
 
     Ok(count)
 }
-
-// ── Step 4: Check plan gates (real scoring) ──────────────────────────────
 
 /// For cycles in `plan_elaboration`, evaluate plan gate completeness by
 /// checking actual DB state (objective summary, architecture, milestones,
@@ -726,8 +716,6 @@ async fn check_plan_gates(
     Ok(count)
 }
 
-// ── Step 5: Decompose and create tasks ───────────────────────────────────
-
 /// For cycles in `decomposition`, create nodes via the planning pipeline
 /// and then create tasks for those nodes. Once all nodes have tasks,
 /// advance to `dispatch`.
@@ -763,7 +751,7 @@ async fn decompose_and_create_tasks(
         let loop_id: String = row.get("loop_id");
         let objective_id: String = row.get("objective_id");
 
-        // REC-006: Generate self-improvement milestone templates (if applicable)
+        // Generate self-improvement milestone templates (if applicable)
         count += recursive_improvement::generate_milestone_templates(pool, &objective_id)
             .await
             .unwrap_or_else(|e| {
@@ -775,8 +763,6 @@ async fn decompose_and_create_tasks(
         let nodes_created = planning::decompose_plan(pool, &objective_id).await?;
         count += nodes_created;
 
-        // ── CTL-018: Milestone-to-node bridge ─────────────────────────
-        //
         // Each milestone_node becomes a Node (if not already bridged),
         // and milestone parent-child relationships become node_edges
         // with edge_kind = 'depends_on'.  This formalises the
@@ -800,7 +786,7 @@ async fn decompose_and_create_tasks(
 
             let mut tx = pool.begin().await?;
 
-            // BND-010: scoped idempotency check
+            // Scoped idempotency check
             let idem_exists: Option<String> = sqlx::query_scalar(
                 "SELECT aggregate_id FROM event_journal
                  WHERE aggregate_kind = 'node' AND idempotency_key = $1 LIMIT 1",
@@ -902,7 +888,7 @@ async fn decompose_and_create_tasks(
     Ok(count)
 }
 
-/// CTL-018: Bridge milestone_nodes to execution nodes.
+/// Bridge milestone_nodes to execution nodes.
 ///
 /// For each milestone_node belonging to this objective (via its
 /// milestone_tree), create a corresponding Node if one does not already
@@ -1093,7 +1079,7 @@ async fn create_tasks_for_objective(
         .as_ref()
         .and_then(|r| r.try_get::<serde_json::Value, _>("policy_payload").ok());
 
-    // SKL-015 + SKL-006: Load available skill packs from DB for resolve_skill_full
+    // Load available skill packs from DB for resolve_skill_full
     let skill_rows = sqlx::query(
         r#"SELECT skill_pack_id, worker_role, description, accepted_task_kinds,
                   "references", scripts, COALESCE(expected_output_contract, '') AS expected_output_contract,
@@ -1128,7 +1114,7 @@ async fn create_tasks_for_objective(
         })
         .collect();
 
-    // SKL-011: Read project_default_skill_pack from user_policies
+    // Read project_default_skill_pack from user_policies
     let project_default_skill_pack: Option<String> = policy_payload
         .as_ref()
         .and_then(|v| v.pointer("/global/default_skill_pack_id"))
@@ -1203,7 +1189,7 @@ async fn create_tasks_for_objective(
 
         let mut tx = pool.begin().await?;
 
-        // BND-010: scoped idempotency check
+        // Scoped idempotency check
         let existing: Option<String> = sqlx::query_scalar(
             "SELECT aggregate_id FROM event_journal
              WHERE aggregate_kind = 'task' AND idempotency_key = $1 LIMIT 1",
@@ -1217,7 +1203,6 @@ async fn create_tasks_for_objective(
             continue;
         }
 
-        // ── Gap 7: Backlog schema enforcement ─────────────────────────
         // Extract timeout and retry budget from policy
         let timeout_seconds = policy_payload
             .as_ref()
@@ -1231,8 +1216,7 @@ async fn create_tasks_for_objective(
             .and_then(|v| v.as_i64())
             .unwrap_or(3) as i32;
 
-        // SKL-015 + SKL-010: Resolve skill pack via resolve_skill_full instead
-        // of hardcoded 'default'. Uses the lane as task_kind for mapping.
+        // Resolve skill pack via resolve_skill_full. Uses the lane as task_kind.
         let task_kind = lane; // lane maps directly to task_kind for resolution
         let skill_resolution = SkillRegistryLoader::resolve_skill_full(
             Some(&task_id),
@@ -1320,8 +1304,6 @@ async fn create_tasks_for_objective(
     Ok(count)
 }
 
-// ── Step 6: Dispatch phase ───────────────────────────────────────────────
-
 /// For cycles in `dispatch`, find queued tasks and mark them as running
 /// (create attempts). Once all tasks are dispatched, advance to `execution`.
 async fn dispatch_phase(
@@ -1399,7 +1381,7 @@ async fn dispatch_queued_tasks(
 
         let mut tx = pool.begin().await?;
 
-        // BND-010: scoped idempotency check
+        // Scoped idempotency check
         let existing: Option<String> = sqlx::query_scalar(
             "SELECT aggregate_id FROM event_journal
              WHERE aggregate_kind = 'task' AND idempotency_key = $1 LIMIT 1",
@@ -1488,8 +1470,6 @@ async fn dispatch_queued_tasks(
 
     Ok(count)
 }
-
-// ── Step 7: Check execution completion ───────────────────────────────────
 
 /// For cycles in `execution`, check if all tasks for the cycle's objective
 /// are terminal (succeeded, failed, or cancelled -- none queued/running).
@@ -1631,8 +1611,6 @@ async fn check_execution_completion(
     Ok(count)
 }
 
-// ── Step 8: Complete integration ─────────────────────────────────────────
-
 /// For cycles in `integration`, advance through state_update to
 /// `next_cycle_ready`. Records cycle completion in event_journal.
 async fn complete_integration(
@@ -1733,7 +1711,7 @@ async fn complete_integration(
         let loop_id: String = row.get("loop_id");
         let objective_id: String = row.get("objective_id");
 
-        // ── Cycle learning: collect failure patterns for next cycle ───
+        // Collect failure patterns for next cycle
         let failures = sqlx::query(
             "SELECT t.task_id, n.title, ar.artifact_uri
              FROM tasks t
@@ -1801,7 +1779,6 @@ async fn complete_integration(
             }
         }
 
-        // ── REC-004: Generate comparison artifact ─────────────────────
         count += recursive_improvement::generate_comparison_artifact(
             pool, &objective_id, &cycle_id, &loop_id,
         )
@@ -1811,7 +1788,6 @@ async fn complete_integration(
             0
         });
 
-        // ── REC-005: Compute improvement score ────────────────────────
         count += recursive_improvement::compute_improvement_score(
             pool, &objective_id, &cycle_id,
         )
@@ -1821,7 +1797,6 @@ async fn complete_integration(
             0
         });
 
-        // ── REC-007: Drift check for self-improvement ─────────────────
         count += recursive_improvement::check_self_improvement_drift(
             pool, &objective_id, &cycle_id,
         )
@@ -1831,7 +1806,6 @@ async fn complete_integration(
             0
         });
 
-        // ── REC-009: Generate recursive report ────────────────────────
         count += recursive_improvement::generate_recursive_report(
             pool, &objective_id, &cycle_id, &loop_id,
         )
@@ -1841,7 +1815,6 @@ async fn complete_integration(
             0
         });
 
-        // ── REC-010: Extended memory (success patterns + roadmap) ─────
         count += recursive_improvement::write_extended_memory(
             pool, &objective_id, &cycle_id,
         )
@@ -1889,8 +1862,6 @@ async fn complete_integration(
     Ok(count)
 }
 
-// ── Step 9: Handle next cycle ────────────────────────────────────────────
-
 /// For cycles in `next_cycle_ready`, the create_cycles_for_active_loops
 /// function (Step 2) will pick these up automatically on the next tick.
 /// This function just logs them for observability.
@@ -1915,9 +1886,7 @@ async fn handle_next_cycle(
     Ok(0)
 }
 
-// ── Phase 2: Conversation extraction ─────────────────────────────────
-
-/// Phase 2: conversation_extraction
+/// Conversation extraction phase.
 /// Check for new conversation extracts linked to active objectives.
 /// If found, update plan state with extracted constraints/decisions.
 async fn process_conversation_extracts(
@@ -2088,9 +2057,7 @@ async fn process_conversation_extracts(
     Ok(actions)
 }
 
-// ── Phase 5: Periodic review ─────────────────────────────────────────
-
-/// Phase 5: periodic review check.
+/// Periodic review check.
 ///
 /// Creates review artifacts for objectives that need review.
 ///
@@ -2263,9 +2230,7 @@ async fn check_periodic_reviews(
     Ok(actions)
 }
 
-// ── Phase 5b: Process pending reviews (auto-approval) ───────────────
-
-/// Check pending reviews against auto-approval thresholds (REV-012, REV-013).
+/// Check pending reviews against auto-approval thresholds.
 ///
 /// REV-012: Reads review results from review_artifacts.
 /// REV-013: Checks auto_approval_thresholds to decide auto-approval.
@@ -2432,9 +2397,7 @@ async fn process_pending_reviews(pool: &PgPool) -> Result<u32, Box<dyn std::erro
     Ok(processed)
 }
 
-// ── Phase 10: Certification candidate selection ──────────────────────
-
-/// Phase 10: Select certification candidates from completed tasks.
+/// Select certification candidates from completed tasks.
 ///
 /// This is a sweep for any succeeded tasks that worker-dispatch may have
 /// missed when checking certification eligibility.  Only tasks whose
@@ -2443,7 +2406,7 @@ async fn process_pending_reviews(pool: &PgPool) -> Result<u32, Box<dyn std::erro
 async fn select_certification_candidates(
     pool: &PgPool,
 ) -> Result<u32, Box<dyn std::error::Error>> {
-    // FCG-004: candidate selection uses title keywords AND checks
+    // Candidate selection uses title keywords AND checks
     // certification_required flag on nodes AND plan gate demands.
     let candidates = sqlx::query(
         r#"
@@ -2505,8 +2468,7 @@ async fn select_certification_candidates(
 
         let candidate_id = Uuid::now_v7().to_string();
 
-        // FCG-005: INSERT includes provenance_task_attempt_id
-        // FCG-006: Collect source anchors from artifact_refs for this task
+        // Collect source anchors from artifact_refs for this task
         let anchor_rows = sqlx::query(
             "SELECT artifact_uri, artifact_kind FROM artifact_refs \
              WHERE task_id = $1 AND artifact_kind IN ('source_file', 'source_anchor', 'output_file') \
@@ -2551,8 +2513,6 @@ async fn select_certification_candidates(
     }
     Ok(actions)
 }
-
-// ── Continuous: Conflict detection ───────────────────────────────────
 
 /// Detect conflicts: find nodes with multiple succeeded tasks that have
 /// different outputs, indicating potential divergence.
@@ -2699,9 +2659,8 @@ async fn detect_conflicts(
         tracing::info!(conflict_id, node_id, title, "Detected divergence conflict");
     }
 
-    // ── CNF-007: Review disagreement conflict detection ──────────────
-    //
-    // When two reviews on the same target_ref have opposing verdicts
+    // Review disagreement conflict detection: when two reviews on the
+    // same target_ref have opposing verdicts
     // (one approved, one rejected), create a review_disagreement conflict.
     let disagreements = sqlx::query(
         r#"
@@ -2809,8 +2768,6 @@ async fn detect_conflicts(
 
     Ok(actions)
 }
-
-// ── Continuous: Conflict auto-resolution ─────────────────────────────
 
 /// Auto-resolve divergence conflicts: if exactly one task succeeded and all
 /// others failed, pick the winner automatically (CNF-011).
@@ -3061,8 +3018,6 @@ async fn auto_resolve_conflicts(pool: &PgPool, scaling: &ScalingContext) -> Resu
     Ok(resolved)
 }
 
-// ── Continuous: Drift detection (Gap 6) ──────────────────────────────
-
 /// Detect drift: check if upstream assumptions have changed since tasks were
 /// certified. When an upstream node is modified after a downstream node was
 /// certified, the certification is marked stale and a drift event is emitted.
@@ -3098,7 +3053,7 @@ async fn detect_drift(pool: &PgPool, scaling: &ScalingContext) -> Result<u32, Bo
         let title: &str = row.try_get("title")?;
         let cert_id: &str = row.try_get("certification_ref_id")?;
 
-        // FCG-012: Mark certification as stale
+        // Mark certification as stale
         sqlx::query(
             "UPDATE certification_refs SET status = 'stale' WHERE certification_ref_id = $1"
         )
@@ -3106,7 +3061,7 @@ async fn detect_drift(pool: &PgPool, scaling: &ScalingContext) -> Result<u32, Bo
         .execute(pool)
         .await?;
 
-        // FCG-012: Insert stale invalidation record for audit trail
+        // Insert stale invalidation record for audit trail
         let invalidation_id = Uuid::now_v7().to_string();
         sqlx::query(
             "INSERT INTO stale_invalidation_records \
@@ -3127,7 +3082,7 @@ async fn detect_drift(pool: &PgPool, scaling: &ScalingContext) -> Result<u32, Bo
         .execute(pool)
         .await?;
 
-        // FCG-013: Revalidation trigger -- check if auto-resubmit is configured
+        // Revalidation trigger -- check if auto-resubmit is configured
         let auto_resubmit: bool = sqlx::query_scalar(
             "SELECT COALESCE( \
                  (SELECT (policy_payload->>'auto_resubmit_on_stale')::boolean \
@@ -3340,8 +3295,6 @@ async fn detect_drift(pool: &PgPool, scaling: &ScalingContext) -> Result<u32, Bo
     Ok(actions)
 }
 
-// ── Phase 11: Process certification queue (formal-claim CLI) ─────────────
-
 /// Intermediate result from running the formal-claim CLI pipeline.
 ///
 /// When the HTTP gateway is used instead of the CLI, `api_result` carries
@@ -3463,7 +3416,7 @@ async fn process_certification_queue(pool: &PgPool) -> Result<u32, Box<dyn std::
         let candidate_id: &str = row.try_get("candidate_id")?;
         let task_id: &str = row.try_get("task_id")?;
 
-        // FCG-007: Normalize claim text before submission
+        // Normalize claim text before submission
         let claim_summary = raw_claim_summary.trim();
         if claim_summary.is_empty() {
             tracing::warn!(submission_id, candidate_id, "Skipping: empty claim text after normalization");
@@ -3476,7 +3429,7 @@ async fn process_certification_queue(pool: &PgPool) -> Result<u32, Box<dyn std::
             continue;
         }
 
-        // FCG-006: Parse source anchors for the claim
+        // Parse source anchors for the claim
         let _source_anchors: Vec<String> = row
             .try_get::<serde_json::Value, _>("source_anchors")
             .ok()
@@ -3651,7 +3604,6 @@ async fn process_certification_queue(pool: &PgPool) -> Result<u32, Box<dyn std::
                 }
             }
         } else {
-            // ── REC-008: Block single-formalizer certification for self-improvement ──
             // If this node belongs to a self-improvement objective, require dual
             // formalization. Single-formalizer certification is denied.
             let requires_dual = recursive_improvement::is_self_improvement_requires_dual(pool, node_id)
@@ -3875,7 +3827,7 @@ async fn apply_certification_result(
     .execute(&mut *tx)
     .await?;
 
-    // FCG-009: Create result projection (update queue_status to 'completed' above)
+    // Create result projection
     let local_gate_effect = if result.passed { "admit" } else { "block" };
     let lane_transition = if result.passed {
         "branch_to_mainline_candidate"
@@ -3903,7 +3855,7 @@ async fn apply_certification_result(
     .execute(&mut *tx)
     .await?;
 
-    // FCG-010: INSERT or UPDATE certification_refs with the result
+    // Store certification_refs with the result
     let cert_ref_id = Uuid::now_v7().to_string();
     let cert_status = if result.passed { "valid" } else { "rejected" };
     sqlx::query(
@@ -3924,7 +3876,7 @@ async fn apply_certification_result(
     .execute(&mut *tx)
     .await?;
 
-    // FCG-011: Branch/mainline impact
+    // Branch/mainline impact
     // On pass: transition node lane from branch to mainline_candidate
     // On failure: keep as branch (no_change)
     if result.passed {
@@ -3938,7 +3890,7 @@ async fn apply_certification_result(
     }
     // On failure, explicitly keep node in current lane (no-op) -- do NOT move.
 
-    // FCG-014: Claim/ref linkage -- link the certified result back to the node
+    // Link the certified result back to the node
     let link_id = Uuid::now_v7().to_string();
     sqlx::query(
         "INSERT INTO certification_claim_links \
@@ -3993,8 +3945,6 @@ async fn apply_certification_result(
     Ok(())
 }
 
-// ── Helper: phase transition ─────────────────────────────────────────────
-
 /// Advance a cycle from one phase to another, with idempotency and event
 /// recording.
 ///
@@ -4013,7 +3963,7 @@ async fn advance_cycle_phase(
 
     let mut tx = pool.begin().await?;
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let existing: Option<String> = sqlx::query_scalar(
         "SELECT aggregate_id FROM event_journal
          WHERE aggregate_kind = 'cycle' AND idempotency_key = $1 LIMIT 1",
@@ -4065,8 +4015,6 @@ async fn advance_cycle_phase(
     .execute(tx.as_mut())
     .await?;
 
-    // ── OBS-007: Emit phase-status sidecar record ──────────────────────
-    //
     // After each successful phase transition, INSERT a lightweight sidecar
     // event into event_journal with aggregate_kind='phase_sidecar'. This
     // records cycle_id, exited phase, entered phase, and a timestamp so
@@ -4100,8 +4048,6 @@ async fn advance_cycle_phase(
     tracing::info!(cycle_id, from_phase, to_phase, trigger, "Phase transition applied");
     Ok(1)
 }
-
-// ── Retention policy enforcement ─────────────────────────────────────────
 
 /// Enforce retention policies defined in DB. Cleans up old event_journal
 /// entries, completed task_attempts, stale worktree records, and old

@@ -9,8 +9,6 @@ use review_governance::{ReviewArtifactSummary, ReviewKind, ReviewOutcome, genera
 use crate::error::{ApiResult, bad_request, internal_error, not_found};
 use crate::state::AppState;
 
-// ── Request / Response types ────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateReviewRequest {
     pub review_kind: String,
@@ -35,7 +33,7 @@ pub struct ReviewResponse {
     pub duplicated: bool,
 }
 
-/// Response type for the human digest endpoint (REV-019).
+/// Response type for the human digest endpoint.
 #[derive(Serialize, Clone, utoipa::ToSchema)]
 pub struct ReviewDigestResponse {
     pub objective_id: String,
@@ -90,8 +88,6 @@ const VALID_REVIEW_KINDS: &[&str] = &[
 
 const VALID_STATUSES: &[&str] = &["scheduled", "in_progress", "approved", "changes_requested", "superseded"];
 
-// ── Handlers ────────────────────────────────────────────────────────────
-
 /// POST /api/reviews
 #[utoipa::path(
     post,
@@ -115,7 +111,7 @@ pub async fn create_review(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let review_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "SELECT aggregate_id FROM event_journal WHERE aggregate_kind = 'review' AND idempotency_key = $1 LIMIT 1",
     )
@@ -414,8 +410,6 @@ pub async fn approve_review(
     Ok(Json(review_from_row(&row, false)?))
 }
 
-// ── REV-019: Human digest summary endpoint ──────────────────────────
-
 #[derive(Deserialize)]
 pub struct DigestQuery {
     pub objective_id: String,
@@ -446,7 +440,7 @@ fn parse_outcome(s: Option<&str>) -> Option<ReviewOutcome> {
 
 /// GET /api/reviews/digest?objective_id={id}
 ///
-/// REV-019: Generate a human-readable digest for all reviews targeting
+/// Generate a human-readable digest for all reviews targeting
 /// the given objective. Queries review_artifacts, maps to
 /// ReviewArtifactSummary, calls generate_review_digest.
 #[utoipa::path(

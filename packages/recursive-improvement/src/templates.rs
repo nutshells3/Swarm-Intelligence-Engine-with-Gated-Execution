@@ -12,8 +12,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── REC-006: Template phases and rollback anchors ────────────────────────
-
 /// A phase within a self-improvement template.  Each phase has
 /// explicit entry/exit conditions and optional safety checkpoints.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -49,7 +47,7 @@ pub struct RollbackAnchor {
     pub created_at: DateTime<Utc>,
 }
 
-/// REC-006 -- Self-improvement template.
+/// Self-improvement template.
 ///
 /// A pre-defined template prescribing the phases, safety checkpoints,
 /// and rollback anchors for a self-improvement loop.  Templates are

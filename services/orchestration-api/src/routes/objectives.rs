@@ -52,7 +52,7 @@ pub async fn create_objective(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let objective_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check (aggregate_kind + idempotency_key unique index)
+    // Scoped idempotency check (aggregate_kind + idempotency_key unique index)
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'objective' and idempotency_key = $1 limit 1",
     )
@@ -208,8 +208,6 @@ pub async fn list_objectives(
     Ok(Json(results))
 }
 
-// ── Plan Gate for an objective ──────────────────────────────────────
-
 #[derive(Serialize, utoipa::ToSchema)]
 pub struct GateConditionEntry {
     pub label: String,
@@ -320,8 +318,6 @@ pub async fn get_objective_gate(
         block_reason,
     })))
 }
-
-// ── Milestones for an objective ─────────────────────────────────────
 
 #[derive(Serialize, utoipa::ToSchema)]
 pub struct MilestoneNodeResponse {

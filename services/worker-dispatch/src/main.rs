@@ -20,8 +20,6 @@ use std::time::Duration;
 use std::env;
 use uuid::Uuid;
 
-// ── Dispatch context ─────────────────────────────────────────────────────
-
 struct DispatchContext {
     pool: PgPool,
     registry: Arc<AdapterRegistry>,
@@ -29,8 +27,6 @@ struct DispatchContext {
     scaling_ctx: Arc<ScalingContext>,
     max_concurrent: usize,
 }
-
-// ── Main entry point ─────────────────────────────────────────────────────
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -105,8 +101,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-// ── Dispatch tick ────────────────────────────────────────────────────────
-
 /// Run one dispatch tick: find running tasks without active attempts
 /// whose dependencies are all completed, and execute them in parallel.
 async fn dispatch_tick(ctx: &DispatchContext) -> Result<u32, Box<dyn std::error::Error>> {
@@ -161,9 +155,7 @@ async fn dispatch_tick(ctx: &DispatchContext) -> Result<u32, Box<dyn std::error:
                 AND pred.lifecycle NOT IN ('admitted', 'done', 'completed')
           )
           AND EXISTS (
-              -- PLAN-020: Only dispatch when plan gate is satisfied or overridden.
-              -- If no plan_gates row exists, or current_status is 'open' / NULL,
-              -- the task is NOT dispatched.
+              -- Only dispatch when plan gate is satisfied or overridden
               SELECT 1 FROM plan_gates pg
               JOIN plans p ON pg.plan_id = p.plan_id
               WHERE p.objective_id = n.objective_id
@@ -186,7 +178,7 @@ async fn dispatch_tick(ctx: &DispatchContext) -> Result<u32, Box<dyn std::error:
 
     let dispatched = tasks.len() as u32;
 
-    // ── ROB-016: Pre-dispatch file-level overlap detection ──────────────
+    // Pre-dispatch file-level overlap detection.
     //
     // Current behavior (file-level):
     //   1. Collect git diffs from artifact_refs for all currently-running tasks.
@@ -242,14 +234,14 @@ async fn dispatch_tick(ctx: &DispatchContext) -> Result<u32, Box<dyn std::error:
     for task_row in tasks {
         let node_statement_check: String = task_row.try_get("node_statement").unwrap_or_default();
 
-        // ROB-016: File-level overlap check (see documentation block above)
+        // File-level overlap check (see documentation block above)
         if !running_file_set.is_empty() {
             let has_overlap = running_file_set.iter().any(|f| node_statement_check.contains(f));
             if has_overlap {
                 let skip_task_id: String = task_row.try_get("task_id").unwrap_or_default();
                 tracing::warn!(
                     task_id = %skip_task_id,
-                    "Skipping task dispatch: file overlap with running tasks detected (ROB-016 file-level)"
+                    "Skipping task dispatch: file overlap with running tasks detected"
                 );
                 continue;
             }
@@ -288,8 +280,6 @@ async fn dispatch_tick(ctx: &DispatchContext) -> Result<u32, Box<dyn std::error:
     Ok(dispatched)
 }
 
-// ── Task execution (standalone async function) ──────────────────────────
-
 /// Execute a single task: create worktree, invoke adapter, update status,
 /// check for newly unblocked dependent tasks.
 async fn execute_task(
@@ -303,13 +293,9 @@ async fn execute_task(
     provider_mode: Option<&str>,
     model_binding: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // ── WRK-015: Terminal state guard ────────────────────────────────────
-    //
-    // Before executing, re-check that the task is still in 'running' state.
-    // Tasks in terminal states (succeeded, failed_permanent, failed_retryable
-    // with exhausted retry budget, cancelled, archived) must never be
-    // re-dispatched. This guards against race conditions where the task
-    // state changed between the dispatch query and execution start.
+    // Terminal state guard: re-check that the task is still in 'running' state.
+    // Guards against race conditions where the task state changed between
+    // the dispatch query and execution start.
     let task_info = sqlx::query(
         "SELECT node_id, worker_role, status, retry_budget FROM tasks WHERE task_id = $1",
     )
@@ -326,7 +312,7 @@ async fn execute_task(
             tracing::warn!(
                 task_id,
                 status = %current_status,
-                "WRK-015: Refusing to dispatch task in terminal state"
+                "Refusing to dispatch task in terminal state"
             );
             return Ok(());
         }
@@ -345,8 +331,7 @@ async fn execute_task(
         return execute_integration_verify(pool, task_id, &node_id, worktree_repo_root).await;
     }
 
-    // SPN-001, ADT-009: Select the best available adapter with fallback.
-    // Uses select_with_fallback to skip unhealthy adapters and try the next one.
+    // Select the best available adapter with fallback.
     let adapter = registry
         .select_with_fallback(provider_mode)
         .or_else(|| registry.select_with_fallback(model_binding.as_deref()))
@@ -372,7 +357,6 @@ async fn execute_task(
         Ok(path) => {
             tracing::info!(task_id, path = %path.display(), "Workspace ready");
 
-            // ── WRK-012: Create per-task artifacts subdirectory ─────────
             let artifacts_dir = path.join(".artifacts");
             if let Err(e) = tokio::fs::create_dir_all(&artifacts_dir).await {
                 tracing::warn!(
@@ -384,10 +368,8 @@ async fn execute_task(
                 tracing::debug!(task_id, path = %artifacts_dir.display(), ".artifacts directory created");
             }
 
-            // ── GIT-005: Populate git_worktree_assignments ──────────────
-            //
-            // Record the worker-to-worktree binding in the authoritative
-            // table so the control plane knows which task owns which worktree.
+            // Record the worker-to-worktree binding so the control plane
+            // knows which task owns which worktree.
             let assignment_id = Uuid::now_v7().to_string();
             let branch_name = format!("task-{}", task_id);
             let worktree_path_str = path.to_string_lossy().to_string();
@@ -458,7 +440,7 @@ async fn execute_task(
     {
         let mut tx = pool.begin().await?;
 
-        // BND-010: scoped idempotency check
+        // Scoped idempotency check
         let existing: Option<String> = sqlx::query_scalar(
             "SELECT aggregate_id FROM event_journal
              WHERE aggregate_kind = 'task' AND idempotency_key = $1 LIMIT 1",
@@ -484,7 +466,7 @@ async fn execute_task(
         .execute(tx.as_mut())
         .await?;
 
-        // SKL-009: Read skill_pack_id from the task row for provenance recording
+        // Read skill_pack_id from the task row for provenance recording
         let skill_pack_id: String = sqlx::query_scalar(
             "SELECT skill_pack_id FROM tasks WHERE task_id = $1",
         )
@@ -493,7 +475,7 @@ async fn execute_task(
         .await
         .unwrap_or_else(|_| "unknown".to_string());
 
-        // Record the dispatch event with skill resolution provenance (SKL-009)
+        // Record the dispatch event with skill resolution provenance
         let payload = serde_json::json!({
             "task_id": task_id,
             "node_id": node_id,
@@ -531,7 +513,7 @@ async fn execute_task(
         }).await;
     }
 
-    // ── Gap 7: Load task cautions for the prompt ──────────────────────
+    // Load task cautions for the prompt
     let cautions: serde_json::Value = sqlx::query_scalar(
         "SELECT COALESCE(cautions, '[]'::jsonb) FROM tasks WHERE task_id = $1"
     )
@@ -548,7 +530,6 @@ async fn execute_task(
         }
     } else { String::new() };
 
-    // ── Context budget enforcement ──────────────────────────────────
     // Read policy-derived token limits
     let policy_row_ctx = sqlx::query(
         "SELECT policy_payload FROM user_policies ORDER BY revision DESC LIMIT 1",
@@ -574,7 +555,6 @@ async fn execute_task(
         .and_then(|v| v.as_u64())
         .unwrap_or(4096);
 
-    // Build the prompt
     let prompt = format!(
         "## Task: {}\n\n\
          ### Description\n\
@@ -600,7 +580,6 @@ async fn execute_task(
         prompt
     };
 
-    // Build the adapter request
     let request = AdapterRequest {
         task_id: task_id.to_string(),
         prompt,
@@ -613,15 +592,11 @@ async fn execute_task(
         temperature: None,
     };
 
-    // Invoke the adapter via spawn backend (SPN-002: spawn_and_wait is the main path)
     let adapter_name = adapter.name().to_string();
 
-    // ── WRK-013: Emit periodic heartbeat events during adapter execution ──
-    //
-    // Spawn a background task that writes heartbeat events to the event_journal
-    // every 30 seconds while the adapter is running. This lets the control plane
-    // and projections know the worker is still alive and making progress.
-    // We use a oneshot channel as a cancellation signal (no extra crate needed).
+    // Emit periodic heartbeat events to the event_journal every 30 seconds
+    // while the adapter is running, so the control plane knows the worker
+    // is still alive.
     let heartbeat_pool = pool.clone();
     let heartbeat_task_id = task_id.to_string();
     let heartbeat_attempt_id = attempt_id.clone();
@@ -661,18 +636,10 @@ async fn execute_task(
         }
     });
 
-    // ── WRK-012: Server-side timeout enforcement ───────────────────────
-    //
-    // Wrap the adapter invocation with a tokio timeout. The adapter has its
-    // own internal timeout, but the server-side timeout is a safety net that
-    // ensures we never wait indefinitely. The server-side timeout is 10%
-    // longer than the adapter timeout to allow the adapter to report its
-    // own timeout status rather than being killed externally.
-    // SPN-002: Invoke through spawn lifecycle boundary.
-    // The spawn backend's spawn_and_wait() is the canonical execution path.
-    // Here we log the spawn boundary and delegate to invoke_boxed which is
-    // the inner mechanism that SubprocessSpawnBackend.spawn_and_wait() calls.
-    tracing::debug!(task_id, adapter = %adapter_name, "SPN-002: spawn boundary entered");
+    // Server-side timeout enforcement: safety net that ensures we never
+    // wait indefinitely. Set 10% longer than the adapter timeout to allow
+    // the adapter to report its own timeout status.
+    tracing::debug!(task_id, adapter = %adapter_name, "spawn boundary entered");
     let server_timeout = Duration::from_secs(request.timeout_seconds as u64 + 30);
     let response = match tokio::time::timeout(server_timeout, adapter.invoke_boxed(request)).await {
         Ok(resp) => resp,
@@ -680,7 +647,7 @@ async fn execute_task(
             tracing::error!(
                 task_id,
                 timeout_secs = server_timeout.as_secs(),
-                "WRK-012: Server-side timeout triggered -- adapter did not respond in time"
+                "Server-side timeout triggered -- adapter did not respond in time"
             );
             // Synthesize a timeout response
             agent_adapters::adapter::AdapterResponse {
@@ -711,8 +678,7 @@ async fn execute_task(
     let _ = cancel_tx.send(());
     let _ = heartbeat_handle.await;
 
-    // ── WRK-014: Classify failures as transient vs permanent ──────────
-    //
+    // Classify failures as transient vs permanent.
     // RetryableError and TimedOut are transient (retryable).
     // Failed, EmptyOutput, MalformedOutput are permanent.
     let (final_status, is_retryable) = match response.status {
@@ -804,8 +770,7 @@ async fn execute_task(
             .await?;
         }
 
-        // ── WRK-011: Store stdout and stderr as separate artifact_refs ──
-        // Strip null bytes before storing — PostgreSQL TEXT columns reject 0x00.
+        // Strip null bytes before storing -- PostgreSQL TEXT columns reject 0x00.
         let clean_stdout = response.stdout.replace('\0', "");
         let clean_stderr = response.stderr.replace('\0', "");
 
@@ -847,10 +812,7 @@ async fn execute_task(
             .await?;
         }
 
-        // ── WRK-013: Emit heartbeat-style status sidecar event ──────────
-        //
-        // After each attempt status change, write a status event to the
-        // event_journal with current task_id, status, and progress info.
+        // Emit status sidecar event after each attempt status change.
         let status_event_id = Uuid::now_v7().to_string();
         let status_idempotency_key = format!("status-sidecar-{}-{}", attempt_id, final_status);
         let status_payload = serde_json::json!({
@@ -916,12 +878,7 @@ async fn execute_task(
         }).await;
     }
 
-    // ── OBS-009: Record retryable backend failure metrics ──────────────
-    //
-    // When a task fails with retryable status, INSERT a record into
-    // task_metrics with failure details. Uses the existing task_metrics
-    // table: task_id, cycle_id, worker_role, duration_ms, retry_count,
-    // succeeded=false, failure_category='retryable_backend'.
+    // Record retryable backend failure metrics in task_metrics table.
     if is_retryable {
         // Resolve cycle_id from task -> node -> objective -> loop -> cycle chain
         let cycle_id_for_metric: Option<String> = sqlx::query_scalar(
@@ -960,15 +917,12 @@ async fn execute_task(
             worker_role = %worker_role,
             duration_ms = response.duration_ms,
             attempt_index,
-            "OBS-009: Retryable failure metric recorded"
+            "Retryable failure metric recorded"
         );
     }
 
-    // ── WRK-015: Same-cycle retry for retryable failures ──────────────
-    //
-    // When a task fails with retryable status and retry_budget > 0,
-    // decrement retry_budget and set task status back to 'running' so the
-    // next dispatch tick creates a new attempt with incremented index.
+    // Same-cycle retry for retryable failures: decrement retry_budget
+    // and set task status back to 'running' for re-dispatch.
     if is_retryable {
         let current_budget: Option<i32> = sqlx::query_scalar(
             "SELECT retry_budget FROM tasks WHERE task_id = $1",
@@ -1041,8 +995,6 @@ async fn execute_task(
         }
     }
 
-    // ── Gap 4: Task completion triggers dependency check ─────────────
-    //
     // After a successful task, check if any dependent tasks can now be
     // unblocked (all their predecessor nodes are completed).
     if final_status == "succeeded" {
@@ -1056,7 +1008,7 @@ async fn execute_task(
         }
     }
 
-    // ── Certification eligibility check (post-completion) ──────────
+    // Certification eligibility check (post-completion)
     if final_status == "succeeded" {
         if let Err(e) = check_certification_eligibility(
             pool,
@@ -1075,7 +1027,7 @@ async fn execute_task(
         }
     }
 
-    // ── Gap 5: Git worktree merge-back and conflict detection ──────────
+    // Git worktree merge-back and conflict detection
     if final_status == "succeeded" {
         let worktree_mgr_mb = WorktreeManager::new(worktree_repo_root.clone());
 
@@ -1185,8 +1137,6 @@ async fn execute_task(
         }
     }
 
-    // ── GIT-006: Dirty worktree detection before cleanup ───────────────
-    //
     // Before releasing the workspace, check if it has uncommitted changes.
     // If dirty, log a warning and skip automatic cleanup to prevent data loss.
     let should_release = match scaling_ctx.isolation.is_dirty(task_id).await {
@@ -1227,8 +1177,6 @@ async fn execute_task(
     };
 
     if should_release {
-        // ── GIT-010: Safe worktree removal after task completion ────────
-        //
         // Release workspace and mark the git_worktree_assignments row as inactive.
         if let Err(e) = scaling_ctx.isolation.release(task_id).await {
             tracing::warn!(task_id, error = %e, "Workspace release failed");
@@ -1274,8 +1222,6 @@ async fn execute_task(
 
     Ok(())
 }
-
-// ── Gap 4: Dependency unblocking ─────────────────────────────────────────
 
 /// After a node completes, find dependent tasks that are now unblocked
 /// (all their predecessor nodes are done) and set them to 'running'
@@ -1327,8 +1273,6 @@ async fn unblock_dependent_tasks(
 
     Ok(())
 }
-
-// ── Certification eligibility check ─────────────────────────────────────
 
 /// After a task succeeds, check whether certification is enabled and whether
 /// this output is eligible. If so, create a `certification_candidate` record
@@ -1494,8 +1438,6 @@ async fn check_certification_eligibility(
     Ok(())
 }
 
-// ── Integration verification ─────────────────────────────────────────────
-
 /// Execute the integration verification task: merge all completed worktrees
 /// into an integration branch, detect project type, run build/test, report.
 ///
@@ -1510,9 +1452,8 @@ async fn execute_integration_verify(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing::info!(task_id, "Starting integration verification");
 
-    // ── GIT-009: Review-before-merge gate ────────────────────────────────
-    //
-    // Look up the objective_id for this node and check if any review_artifacts
+    // Review-before-merge gate: look up the objective_id for this node
+    // and check if any review_artifacts
     // exist. If not, emit a review_needed event and block the merge.
     let objective_id: Option<String> = sqlx::query_scalar(
         "SELECT objective_id FROM nodes WHERE node_id = $1",
@@ -1692,8 +1633,6 @@ async fn execute_integration_verify(
     .execute(pool)
     .await?;
 
-    // ── GIT-007/008: Create conflict records with proper conflict_kind ───
-    //
     // Each merge failure gets its own conflict record with kind = 'mainline_integration'
     // and a corresponding event journal entry.
     for failure in &merge_failures {

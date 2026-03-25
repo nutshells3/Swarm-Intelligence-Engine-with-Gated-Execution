@@ -1,4 +1,4 @@
-//! Certification projection types (FCG-004 through FCG-014).
+//! Certification projection types.
 //!
 //! This module covers the operational machinery: candidate selection rules,
 //! provenance extraction, source-anchor preservation, claim normalization,
@@ -13,11 +13,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::gateway::{GateEffect, LaneTransition};
-
-// ── FCG-004: Task-to-claim candidate selection ──────────────────────────
-//
-// CSV guardrail: "task-to-claim candidate selection rules."
-// Acceptance: selection is rule-based, not ad hoc.
 
 /// A rule that determines whether a completed task output is eligible for
 /// certification. Rules are evaluated in priority order; the first match
@@ -40,11 +35,6 @@ pub struct CandidateSelectionRule {
     pub priority: i32,
 }
 
-// ── FCG-005: Provenance extraction ──────────────────────────────────────
-//
-// CSV guardrail: "provenance extraction for gateway submissions."
-// Acceptance: provenance is explicit and traceable.
-
 /// Provenance record linking a certification candidate back to the worker
 /// invocation and adapter call that produced it.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -63,11 +53,6 @@ pub struct CertificationProvenance {
     pub recorded_at: DateTime<Utc>,
 }
 
-// ── FCG-006: Source-anchor preservation ─────────────────────────────────
-//
-// CSV guardrail: "source-anchor preservation."
-// Acceptance: anchors are preserved and verifiable.
-
 /// A source anchor preserved for gateway reference. Anchors provide the
 /// narrow context the gateway needs without a whole-project context dump.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -84,14 +69,6 @@ pub struct SourceAnchor {
     pub content_hash: Option<String>,
     pub created_at: DateTime<Utc>,
 }
-
-// ── FCG-007: Claim/evidence normalization ───────────────────────────────
-//
-// CSV guardrail: "claim/evidence normalization for gateway calls."
-//   parse_recovery_policy: "strict structured output from gateway-side AI
-//   components preferred; malformed external payloads must fail explicitly
-//   or be normalized under bounded rules."
-// Acceptance: normalization is bounded and explicit.
 
 /// The kind of claim being submitted for certification.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -127,13 +104,6 @@ pub struct NormalizedClaim {
     pub normalization_notes: String,
 }
 
-// ── FCG-008: Certification queue ────────────────────────────────────────
-//
-// CSV guardrail: "certification queue."
-//   iteration_budget: "not_applicable for queueing and projection;
-//   bounded retries only for transport-level failures."
-// Acceptance: queue is explicit, bounded, and observable.
-
 /// Snapshot of the certification queue state for observability.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificationQueueSnapshot {
@@ -151,11 +121,6 @@ pub struct CertificationQueueSnapshot {
     pub snapshot_at: DateTime<Utc>,
 }
 
-// ── FCG-009: Result polling/ingestion ───────────────────────────────────
-//
-// CSV guardrail: "result polling/ingestion."
-// Acceptance: polling is bounded; results are projected, not reinterpreted.
-
 /// Configuration for polling the external gateway for results.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ResultPollingConfig {
@@ -168,11 +133,6 @@ pub struct ResultPollingConfig {
     /// Backoff multiplier (integer, applied to poll_interval_secs).
     pub backoff_multiplier: u32,
 }
-
-// ── FCG-010: Projection into canonical refs ─────────────────────────────
-//
-// CSV guardrail: "projection into canonical refs."
-// Acceptance: projection follows explicit gate effect rules.
 
 /// Record of a canonical reference update triggered by a certification result.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -195,13 +155,6 @@ pub struct CanonicalRefProjection {
     pub projected_at: DateTime<Utc>,
 }
 
-// ── FCG-011: Branch/mainline impact rules ───────────────────────────────
-//
-// CSV guardrail: "branch/mainline impact rules from gates."
-//   roadmap_effect: "may change branch/mainline and roadmap progression
-//   when certified or invalidated outputs land."
-// Acceptance: impact rules are explicit and typed.
-
 /// A rule defining how a certification gate effect impacts branch/mainline
 /// state and roadmap progression.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -220,13 +173,6 @@ pub struct BranchMainlineImpactRule {
     pub description: String,
 }
 
-// ── FCG-012: Stale certification invalidation ───────────────────────────
-//
-// CSV guardrail: "stale certification invalidation."
-//   "stale invalidation simulation."
-// Acceptance: stale results are explicitly invalidated, never silently
-//   kept as valid.
-
 /// Reason a certification result became stale.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -243,7 +189,7 @@ pub enum StaleReason {
     ManualRevocation,
 }
 
-/// FCG-013: Revalidation trigger after upstream changes.
+/// Revalidation trigger after upstream changes.
 ///
 /// When a stale certification is detected, this trigger requests
 /// revalidation.
@@ -260,11 +206,6 @@ pub struct RevalidationTrigger {
     /// When the staleness was detected.
     pub detected_at: DateTime<Utc>,
 }
-
-// ── FCG-014: Claim/argument local ref linkage ───────────────────────────
-//
-// CSV guardrail: "claim/argument local ref linkage."
-// Acceptance: certified claims are cross-linked to local state.
 
 /// Cross-link between a certified claim and a local state reference
 /// (node, task, plan, milestone).

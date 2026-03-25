@@ -44,8 +44,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use state_model::{CyclePhase, NodeLane, NodeLifecycle, TaskStatus};
 
-// ── Shared types ──────────────────────────────────────────────────────────
-
 /// Outcome of executing any command.
 ///
 /// Every command returns a typed result so callers can distinguish
@@ -92,12 +90,7 @@ pub struct CommandRejection {
 /// Unified command result type.
 pub type CommandResult = Result<CommandOutcome, CommandRejection>;
 
-// ── CTL-001: Objective creation command ───────────────────────────────────
-//
-// Starts authoritative state through one write path.
-// Produces an ObjectiveCreated event.
-
-/// CTL-001: Create a new objective.
+/// Create a new objective.
 ///
 /// The control plane must verify that `summary` and `desired_outcome`
 /// are non-empty. The idempotency key prevents duplicate creation.
@@ -119,11 +112,7 @@ pub struct CreateObjectiveCommand {
     pub source_conversation_id: Option<String>,
 }
 
-// ── CTL-002: Loop creation command ────────────────────────────────────────
-//
-// Creates an orchestration loop tied to an objective.
-
-/// CTL-002: Create a loop for an objective.
+/// Create a loop for an objective.
 ///
 /// A loop is the container for cycles. Each objective has at most one
 /// active loop at a time.
@@ -142,12 +131,7 @@ pub struct CreateLoopCommand {
     pub initial_track: String,
 }
 
-// ── CTL-003: Cycle creation command ───────────────────────────────────────
-//
-// Creates a cycle within a loop with durable phase/status initialization.
-// Depends on CTL-001, CTL-002.
-
-/// CTL-003: Create a cycle within a loop.
+/// Create a cycle within a loop.
 ///
 /// Each cycle begins in `Intake` phase. The policy snapshot is
 /// captured at creation time and frozen for the cycle's lifetime.
@@ -170,11 +154,7 @@ pub struct CreateCycleCommand {
     pub policy_snapshot_id: String,
 }
 
-// ── CTL-004: Node creation from plan ──────────────────────────────────────
-//
-// Converts a milestone/plan node into an execution node.
-
-/// CTL-004: Create an execution node from a planning artifact.
+/// Create an execution node from a planning artifact.
 ///
 /// This bridges the planning layer (milestones) into the execution
 /// layer (nodes). The node inherits lane and lifecycle defaults.
@@ -207,11 +187,7 @@ pub struct CreateNodeFromPlanCommand {
     pub initial_lifecycle: NodeLifecycle,
 }
 
-// ── CTL-005: Task creation from nodes ─────────────────────────────────────
-//
-// Decomposes a node into one or more dispatchable tasks.
-
-/// CTL-005: Create a task from an execution node.
+/// Create a task from an execution node.
 ///
 /// Tasks are the atomic unit of work dispatched to workers.
 ///
@@ -235,11 +211,7 @@ pub struct CreateTaskFromNodeCommand {
     pub initial_status: TaskStatus,
 }
 
-// ── CTL-006: Dispatch scheduler ───────────────────────────────────────────
-//
-// Matches queued tasks to available workers.
-
-/// CTL-006: Dispatch scheduler command.
+/// Dispatch scheduler command.
 ///
 /// Instructs the control plane to run a dispatch round: match queued
 /// tasks to idle workers, respecting concurrency and policy limits.
@@ -274,11 +246,7 @@ pub struct DispatchResult {
     pub dispatched_task_ids: Vec<String>,
 }
 
-// ── CTL-007: Per-phase transition rules ───────────────────────────────────
-//
-// Governs cycle phase transitions with explicit legality checks.
-
-/// CTL-007: Phase transition command.
+/// Phase transition command.
 ///
 /// Transitions a cycle from one phase to the next. The control plane
 /// must validate that the transition is legal (see `valid_phase_transitions`).
@@ -343,10 +311,6 @@ pub fn is_valid_phase_transition(from: CyclePhase, to: CyclePhase) -> bool {
     valid_phase_transitions().iter().any(|r| r.from == from && r.to == to)
 }
 
-// ── CTL-008: Queue prioritization ─────────────────────────────────────────
-//
-// Reorders queued tasks based on priority signals.
-
 /// Priority signal used for queue ordering.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -363,7 +327,7 @@ pub enum PrioritySignal {
     BlockingFanOut,
 }
 
-/// CTL-008: Queue prioritization command.
+/// Queue prioritization command.
 ///
 /// Instructs the control plane to re-prioritize the task queue using
 /// the specified signals.
@@ -383,11 +347,7 @@ pub struct QueuePrioritizationCommand {
     pub signals: Vec<PrioritySignal>,
 }
 
-// ── CTL-009: Branch/mainline lane assignment ──────────────────────────────
-//
-// Assigns or reassigns a node's lane.
-
-/// CTL-009: Lane assignment command.
+/// Lane assignment command.
 ///
 /// Moves a node between lanes (Branch, MainlineCandidate, Mainline, etc.)
 /// following the lane transition rules.
@@ -437,11 +397,7 @@ pub fn is_valid_lane_transition(from: NodeLane, to: NodeLane) -> bool {
     valid_lane_transitions().iter().any(|r| r.from == from && r.to == to)
 }
 
-// ── CTL-010: Task completion ingestion ────────────────────────────────────
-//
-// Ingests a task completion event and updates node/cycle state.
-
-/// CTL-010: Task completion command.
+/// Task completion command.
 ///
 /// Records that a task has completed (successfully or otherwise).
 /// The control plane updates the node lifecycle and checks whether
@@ -476,10 +432,6 @@ pub struct TaskCompletionCommand {
     pub completed_at: DateTime<Utc>,
 }
 
-// ── CTL-011: Failure ingestion ────────────────────────────────────────────
-//
-// Ingests a task failure for retry/escalation decisions.
-
 /// Failure classification for retry decisions.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -496,7 +448,7 @@ pub enum FailureKind {
     ValidationFailure,
 }
 
-/// CTL-011: Failure ingestion command.
+/// Failure ingestion command.
 ///
 /// Records a task failure with classification for retry decisions.
 ///
@@ -530,11 +482,7 @@ pub struct FailureIngestionCommand {
     pub failed_at: DateTime<Utc>,
 }
 
-// ── CTL-012: Timeout ingestion ────────────────────────────────────────────
-//
-// Ingests a task timeout for retry/escalation decisions.
-
-/// CTL-012: Timeout ingestion command.
+/// Timeout ingestion command.
 ///
 /// Records that a task timed out. The control plane will apply
 /// the timeout policy to decide next action (retry, cancel, escalate).
@@ -565,11 +513,7 @@ pub struct TimeoutIngestionCommand {
     pub timed_out_at: DateTime<Utc>,
 }
 
-// ── CTL-013: Retry scheduling ─────────────────────────────────────────────
-//
-// Schedules a retry for a failed or timed-out task.
-
-/// CTL-013: Retry scheduling command.
+/// Retry scheduling command.
 ///
 /// Schedules a task for retry after failure or timeout. The control
 /// plane must verify the retry budget has not been exhausted.
@@ -600,10 +544,6 @@ pub struct RetrySchedulingCommand {
     pub reassign_worker: bool,
 }
 
-// ── CTL-014: Drift-triggered requeueing ───────────────────────────────────
-//
-// Re-queues tasks when drift is detected between expected and actual state.
-
 /// Source of a drift signal.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -620,7 +560,7 @@ pub enum DriftSource {
     ManualRequeue,
 }
 
-/// CTL-014: Drift requeue command.
+/// Drift requeue command.
 ///
 /// Re-queues a node's tasks when drift is detected. This is a
 /// corrective action, not a retry -- the work needs to be redone
@@ -646,11 +586,7 @@ pub struct DriftRequeueCommand {
     pub detected_at: DateTime<Utc>,
 }
 
-// ── CTL-015: Next-cycle generation ────────────────────────────────────────
-//
-// Generates the next cycle when the current cycle reaches NextCycleReady.
-
-/// CTL-015: Next cycle generation command.
+/// Next cycle generation command.
 ///
 /// Instructs the control plane to generate the next cycle within a
 /// loop. The current cycle must be in `NextCycleReady` phase.
@@ -675,12 +611,6 @@ pub struct NextCycleGenerationCommand {
     pub carry_forward_node_ids: Vec<String>,
 }
 
-// ── Command handler trait ─────────────────────────────────────────────────
-//
-// All commands are dispatched through a single trait so the control
-// plane can enforce idempotency, audit logging, and transition legality
-// uniformly.
-
 /// Trait for command execution (design contract -- no impl exists yet).
 ///
 /// Implementors must:
@@ -704,67 +634,67 @@ pub struct NextCycleGenerationCommand {
 /// call it from both tick.rs and the API routes.  This will centralize
 /// validation, idempotency checks, and event emission.
 pub trait CommandHandler {
-    /// CTL-001: Create objective.
+    /// Create objective.
     /// Runtime: API `objectives.rs::create_objective`, Tick `create_loops_for_new_objectives`.
     fn handle_create_objective(&self, cmd: CreateObjectiveCommand) -> CommandResult;
 
-    /// CTL-002: Create loop.
+    /// Create loop.
     /// Runtime: API `loops.rs::create_loop`, Tick `create_loops_for_new_objectives`.
     fn handle_create_loop(&self, cmd: CreateLoopCommand) -> CommandResult;
 
-    /// CTL-003: Create cycle.
+    /// Create cycle.
     /// Runtime: API `cycles.rs::create_cycle`, Tick `create_cycles_for_active_loops`.
     fn handle_create_cycle(&self, cmd: CreateCycleCommand) -> CommandResult;
 
-    /// CTL-004: Create node from plan.
+    /// Create node from plan.
     /// Runtime: API `nodes.rs::create_node`, Tick `bridge_milestones_to_nodes`.
     fn handle_create_node_from_plan(&self, cmd: CreateNodeFromPlanCommand) -> CommandResult;
 
-    /// CTL-005: Create task from node.
+    /// Create task from node.
     /// Runtime: API `tasks.rs::create_task`, Tick `create_tasks_for_objective`.
     fn handle_create_task_from_node(&self, cmd: CreateTaskFromNodeCommand) -> CommandResult;
 
-    /// CTL-006: Dispatch scheduler.
+    /// Dispatch scheduler.
     /// Runtime: Tick `dispatch_phase` + `dispatch_queued_tasks`.
     fn handle_dispatch_scheduler(&self, cmd: DispatchSchedulerCommand) -> CommandResult;
 
-    /// CTL-007: Phase transition.
+    /// Phase transition.
     /// Runtime: Tick `advance_cycle_phase` (shared helper for all phase moves).
     fn handle_phase_transition(&self, cmd: PhaseTransitionCommand) -> CommandResult;
 
-    /// CTL-008: Queue prioritization.
+    /// Queue prioritization.
     /// Runtime: **Not yet implemented** -- tasks dispatch in insertion order.
     fn handle_queue_prioritization(&self, cmd: QueuePrioritizationCommand) -> CommandResult;
 
-    /// CTL-009: Lane assignment.
+    /// Lane assignment.
     /// Runtime: Tick `apply_certification_result` (promotes lane on cert pass).
     fn handle_lane_assignment(&self, cmd: LaneAssignmentCommand) -> CommandResult;
 
-    /// CTL-010: Task completion.
+    /// Task completion.
     /// Runtime: API `task_lifecycle.rs::complete_task`, `patch_task`,
     /// `complete_attempt`; Tick `check_execution_completion`.
     fn handle_task_completion(&self, cmd: TaskCompletionCommand) -> CommandResult;
 
-    /// CTL-011: Failure ingestion.
+    /// Failure ingestion.
     /// Runtime: API `task_lifecycle.rs::fail_task`, `patch_task`;
     /// Tick `check_execution_completion` (failure path).
     fn handle_failure_ingestion(&self, cmd: FailureIngestionCommand) -> CommandResult;
 
-    /// CTL-012: Timeout ingestion.
+    /// Timeout ingestion.
     /// Runtime: Tick `check_execution_completion` (timeout detection).
     /// **No dedicated timeout handler yet.**
     fn handle_timeout_ingestion(&self, cmd: TimeoutIngestionCommand) -> CommandResult;
 
-    /// CTL-013: Retry scheduling.
+    /// Retry scheduling.
     /// Runtime: API `task_lifecycle.rs::patch_task` (`failed -> queued`);
     /// Tick `check_execution_completion` (implicit). **Retry budget not enforced.**
     fn handle_retry_scheduling(&self, cmd: RetrySchedulingCommand) -> CommandResult;
 
-    /// CTL-014: Drift requeue.
+    /// Drift requeue.
     /// Runtime: Tick `detect_drift`. **Requeue action not yet implemented.**
     fn handle_drift_requeue(&self, cmd: DriftRequeueCommand) -> CommandResult;
 
-    /// CTL-015: Next cycle generation.
+    /// Next cycle generation.
     /// Runtime: Tick `handle_next_cycle` + `create_cycles_for_active_loops`.
     fn handle_next_cycle_generation(&self, cmd: NextCycleGenerationCommand) -> CommandResult;
 }

@@ -8,8 +8,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── CONV-002: Extracted constraint schema ────────────────────────────
-
 /// The kind of constraint extracted from conversation.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -42,7 +40,7 @@ pub enum EnforcementStatus {
     Deferred,
 }
 
-/// CONV-002: A single constraint extracted from design conversation.
+/// A single constraint extracted from design conversation.
 ///
 /// Typed with source references back to the originating message(s)
 /// and an enforcement status tracking whether the constraint is
@@ -63,9 +61,7 @@ pub struct ExtractedConstraint {
     pub extracted_at: DateTime<Utc>,
 }
 
-// ── CONV-003: Extracted design-decision schema ───────────────────────
-
-/// CONV-003: A design decision captured from conversation.
+/// A design decision captured from conversation.
 ///
 /// Records what was decided, why, and which components are affected
 /// so downstream planning can reference the rationale.
@@ -85,8 +81,6 @@ pub struct ExtractedDesignDecision {
     pub extracted_at: DateTime<Utc>,
 }
 
-// ── CONV-004: Extracted open-question schema ─────────────────────────
-
 /// Whether an open question blocks progress.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -99,7 +93,7 @@ pub enum BlockingStatus {
     Resolved,
 }
 
-/// CONV-004: An open question extracted from conversation.
+/// An open question extracted from conversation.
 ///
 /// Tracks unresolved questions that may block planning or execution,
 /// along with a suggested resolution path.
@@ -119,9 +113,7 @@ pub struct ExtractedOpenQuestion {
     pub extracted_at: DateTime<Utc>,
 }
 
-// ── CONV-001: Conversation extract schema ────────────────────────────
-
-/// CONV-001: Full conversation extract.
+/// Full conversation extract.
 ///
 /// Aggregates the summarized intent of a conversation along with
 /// all extracted constraints, design decisions, and open questions.

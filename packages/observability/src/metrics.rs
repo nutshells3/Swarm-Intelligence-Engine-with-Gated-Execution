@@ -1,4 +1,4 @@
-//! Authoritative metrics types (OBS-001 through OBS-006).
+//! Authoritative metrics types.
 //!
 //! These are the source-of-truth counters emitted by the control plane
 //! and persisted durably. Projection-only aggregations live in
@@ -6,13 +6,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
-// ── OBS-001: Cycle metrics ──────────────────────────────────────────────
-//
-// CSV guardrail: "Define durable metrics for cycles."
-// Caution: "Do not mix projection-only counters with authoritative
-//   metrics."
-// Acceptance: schema validation; metrics replay check.
 
 /// A cause that blocked progress during a cycle. Recorded so operators
 /// can distinguish scheduling delays from certification bottlenecks.
@@ -52,11 +45,6 @@ pub struct CycleMetrics {
     pub recorded_at: DateTime<Utc>,
 }
 
-// ── OBS-002: Task metrics ───────────────────────────────────────────────
-//
-// CSV guardrail: "Define durable metrics for tasks."
-// Acceptance: schema validation; metrics replay check.
-
 /// Authoritative metrics for a single task execution attempt.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskMetrics {
@@ -73,12 +61,6 @@ pub struct TaskMetrics {
     pub failure_category: Option<String>,
     pub recorded_at: DateTime<Utc>,
 }
-
-// ── OBS-003: Cost accounting ────────────────────────────────────────────
-//
-// CSV guardrail: "Define durable metrics for costs."
-// Caution: "Do not blur estimated vs provider-reported counts."
-// Acceptance: schema validation; projection fixture check.
 
 /// Provenance of a cost record. Distinguishes provider-reported
 /// (authoritative) costs from local estimates so downstream consumers
@@ -114,12 +96,6 @@ pub struct CostRecord {
     pub recorded_at: DateTime<Utc>,
 }
 
-// ── OBS-004: Token accounting ───────────────────────────────────────────
-//
-// CSV guardrail: "Define durable metrics for tokens."
-// Caution: "Do not blur estimated vs provider-reported counts."
-// Acceptance: schema validation; projection fixture check.
-
 /// Provenance of a token count. Ensures consumers can distinguish exact
 /// figures from estimates.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -151,11 +127,6 @@ pub struct TokenAccountingRecord {
     pub recorded_at: DateTime<Utc>,
 }
 
-// ── OBS-005: Worker success rates ───────────────────────────────────────
-//
-// CSV guardrail: "Define durable metrics for worker success rates."
-// Acceptance: schema validation; metrics replay check.
-
 /// Rolling success-rate snapshot for a worker role within a time window.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WorkerSuccessRate {
@@ -174,11 +145,6 @@ pub struct WorkerSuccessRate {
     /// Success rate as a ratio [0.0, 1.0].
     pub success_rate: f64,
 }
-
-// ── OBS-006: Saturation metrics ─────────────────────────────────────────
-//
-// CSV guardrail: "Define durable metrics for saturation."
-// Acceptance: schema validation; metrics replay check.
 
 /// Qualitative pressure level derived from saturation counters. The
 /// control plane may use this to throttle intake or scale workers.

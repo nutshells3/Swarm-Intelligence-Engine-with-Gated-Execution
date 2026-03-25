@@ -24,8 +24,6 @@ pub enum EndpointHealth {
     Unknown,
 }
 
-// ── DEP-002: Remote certification endpoint ──────────────────────────────
-
 /// Schema for a remote certification endpoint. The control plane uses
 /// this to route certification requests when the deployment mode
 /// permits remote certification.
@@ -48,8 +46,6 @@ pub struct RemoteCertificationEndpoint {
     /// Last time health was checked.
     pub last_health_check: Option<DateTime<Utc>>,
 }
-
-// ── DEP-003: Lean compile endpoint ──────────────────────────────────────
 
 /// Schema for a remote Lean compilation endpoint. Used when local Lean
 /// toolchain is unavailable or when remote compilation is preferred for

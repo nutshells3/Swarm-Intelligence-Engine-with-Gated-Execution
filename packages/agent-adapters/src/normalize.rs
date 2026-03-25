@@ -74,7 +74,7 @@ impl Default for NormalizationPolicy {
     }
 }
 
-/// ADT-010 -- Normalized output after applying the normalization policy.
+/// Normalized output after applying the normalization policy.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NormalizedOutput {
     /// The normalized content.
@@ -102,7 +102,7 @@ pub fn normalize_output(raw: &str, policy: &NormalizationPolicy) -> NormalizedOu
     let mut content = raw.to_string();
     let mut result = NormalizationResult::Clean;
 
-    // ADT-010: Strip ANSI escape sequences before anything else so that
+    // Strip ANSI escape sequences before anything else so that
     // downstream control-char stripping does not leave orphan fragments.
     if policy.strip_ansi_escapes {
         let before = content.len();
@@ -162,7 +162,7 @@ pub fn normalize_output(raw: &str, policy: &NormalizationPolicy) -> NormalizedOu
     }
 }
 
-/// ADT-010: Extract the actual response content from codex exec's multi-section output.
+/// Extract the actual response content from codex exec's multi-section output.
 ///
 /// Codex exec outputs structured text with sections like:
 /// ```text

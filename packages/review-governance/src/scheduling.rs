@@ -1,4 +1,4 @@
-//! Review scheduling policy types (REV-004 through REV-006, REV-011, REV-013).
+//! Review scheduling policy types.
 //!
 //! Key design rule: reviews are scheduled explicitly, not ad hoc.
 //! Auto-approval requires explicit threshold and always leaves a durable
@@ -8,11 +8,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::artifacts::ReviewKind;
-
-// ── REV-004: Review scheduling policy schema ────────────────────────────
-//
-// CSV guardrail: "Define review scheduling policy schema."
-// Acceptance: scheduling is policy-driven, not ad hoc.
 
 /// When a review is triggered.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -28,7 +23,7 @@ pub enum ReviewTriggerKind {
     Manual,
 }
 
-/// REV-004 -- Review scheduling policy.
+/// Review scheduling policy.
 ///
 /// Defines when and how reviews are scheduled for a given review kind.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -55,12 +50,7 @@ pub struct ReviewSchedulingPolicy {
     pub updated_at: DateTime<Utc>,
 }
 
-// ── REV-005: Heartbeat review trigger rules ─────────────────────────────
-//
-// CSV guardrail: "Define heartbeat review trigger rules."
-// Acceptance: heartbeat triggers are explicit and bounded.
-
-/// REV-005 -- Heartbeat review trigger.
+/// Heartbeat review trigger.
 ///
 /// Triggers a review after a certain number of cycles or elapsed time,
 /// ensuring the system does not go too long without human oversight.
@@ -82,14 +72,7 @@ pub struct HeartbeatReviewTrigger {
     pub last_triggered_at: Option<DateTime<Utc>>,
 }
 
-// ── REV-006: Auto-approval threshold schema ─────────────────────────────
-//
-// CSV guardrail: "Define auto-approval threshold schema."
-//   auto_approval_policy: various -- some items require human review.
-//   "Do not silently auto-approve without leaving a durable review artifact."
-// Acceptance: auto-approval is bounded and always leaves a record.
-
-/// REV-006 -- Auto-approval threshold.
+/// Auto-approval threshold.
 ///
 /// Defines conditions under which a review can be auto-approved. Even when
 /// auto-approved, a durable review artifact is always created (CSV caution).
@@ -116,11 +99,6 @@ pub struct AutoApprovalThreshold {
     pub policy_justification: String,
 }
 
-// ── REV-011: Periodic review scheduler ──────────────────────────────────
-//
-// CSV guardrail: "Implement periodic review scheduler."
-// Acceptance: scheduler is policy-driven and observable.
-
 /// Snapshot of the periodic review scheduler's state.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ReviewSchedulerSnapshot {
@@ -135,11 +113,6 @@ pub struct ReviewSchedulerSnapshot {
     /// When this snapshot was taken.
     pub snapshot_at: DateTime<Utc>,
 }
-
-// ── REV-012: Review result ingestion ────────────────────────────────────
-//
-// CSV guardrail: "Implement review result ingestion."
-// Acceptance: results are ingested and projected, not silently dropped.
 
 /// A review result ready for ingestion into local state.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -157,11 +130,6 @@ pub struct ReviewResultIngestion {
     /// When the result was ingested.
     pub ingested_at: DateTime<Utc>,
 }
-
-// ── REV-013: Auto-approval policy resolution ────────────────────────────
-//
-// CSV guardrail: "Implement auto-approval policy resolution."
-// Acceptance: resolution is explicit and traceable.
 
 /// Record of an auto-approval decision, including why it was permitted.
 /// This exists to ensure auto-approvals always leave a durable artifact

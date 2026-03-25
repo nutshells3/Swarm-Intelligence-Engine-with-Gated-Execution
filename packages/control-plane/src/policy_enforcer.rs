@@ -6,8 +6,6 @@
 
 use user_policy::{GlobalExecutionPolicy, ModelBinding, UserPolicySnapshot};
 
-// ── Policy decision ─────────────────────────────────────────────────────
-
 /// The outcome of a policy check.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct PolicyDecision {
@@ -18,8 +16,6 @@ pub struct PolicyDecision {
     /// The numeric limit that was applied, if any.
     pub applied_limit: Option<i32>,
 }
-
-// ── Enforcer ────────────────────────────────────────────────────────────
 
 /// Stateless policy enforcement functions.
 pub struct PolicyEnforcer;

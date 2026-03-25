@@ -34,9 +34,7 @@ use crate::commands::{
     TaskCompletionCommand, TimeoutIngestionCommand,
 };
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
-/// Check the scoped idempotency registry (BND-010).
+/// Check the scoped idempotency registry.
 ///
 /// Returns `Some(aggregate_id)` when a matching event already exists.
 async fn idempotency_check(
@@ -111,7 +109,6 @@ fn reject(reason: CommandRejectionReason, detail: impl Into<String>) -> CommandR
     }
 }
 
-// ── CTL-001: Create objective ──────────────────────────────────────────────
 
 /// Execute [`CreateObjectiveCommand`].
 ///
@@ -134,7 +131,7 @@ pub async fn execute_create_objective(
         ));
     }
 
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "objective", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -174,7 +171,6 @@ pub async fn execute_create_objective(
     Ok(outcome_applied(event_id, format!("objective {} created", objective_id)))
 }
 
-// ── CTL-002: Create loop ───────────────────────────────────────────────────
 
 /// Execute [`CreateLoopCommand`].
 ///
@@ -183,7 +179,7 @@ pub async fn execute_create_loop(
     tx: &mut Transaction<'_, Postgres>,
     cmd: &CreateLoopCommand,
 ) -> CommandResult {
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "loop", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -240,7 +236,6 @@ pub async fn execute_create_loop(
     Ok(outcome_applied(event_id, format!("loop {} created", loop_id)))
 }
 
-// ── CTL-003: Create cycle ──────────────────────────────────────────────────
 
 /// Execute [`CreateCycleCommand`].
 ///
@@ -249,7 +244,7 @@ pub async fn execute_create_cycle(
     tx: &mut Transaction<'_, Postgres>,
     cmd: &CreateCycleCommand,
 ) -> CommandResult {
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "cycle", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -318,7 +313,6 @@ pub async fn execute_create_cycle(
     Ok(outcome_applied(event_id, format!("cycle {} created", cycle_id)))
 }
 
-// ── CTL-004: Create node from plan ─────────────────────────────────────────
 
 /// Execute [`CreateNodeFromPlanCommand`].
 ///
@@ -329,7 +323,7 @@ pub async fn execute_create_node_from_plan(
 ) -> CommandResult {
     let idempotency_key_node = format!("milestone-bridge-{}", cmd.milestone_id);
 
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "node", &idempotency_key_node).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -398,7 +392,6 @@ pub async fn execute_create_node_from_plan(
     Ok(outcome_applied(event_id, format!("node {} created from milestone {}", node_id, cmd.milestone_id)))
 }
 
-// ── CTL-005: Create task from node ─────────────────────────────────────────
 
 /// Execute [`CreateTaskFromNodeCommand`].
 ///
@@ -407,7 +400,7 @@ pub async fn execute_create_task_from_node(
     tx: &mut Transaction<'_, Postgres>,
     cmd: &CreateTaskFromNodeCommand,
 ) -> CommandResult {
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "task", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -471,7 +464,6 @@ pub async fn execute_create_task_from_node(
     Ok(outcome_applied(event_id, format!("task {} created", task_id)))
 }
 
-// ── CTL-006: Dispatch scheduler ────────────────────────────────────────────
 
 /// Execute [`DispatchSchedulerCommand`].
 ///
@@ -481,7 +473,7 @@ pub async fn execute_dispatch_scheduler(
     tx: &mut Transaction<'_, Postgres>,
     cmd: &DispatchSchedulerCommand,
 ) -> CommandResult {
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "dispatch", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -627,7 +619,6 @@ pub async fn execute_dispatch_scheduler(
     })
 }
 
-// ── CTL-010: Task completion ───────────────────────────────────────────────
 
 /// Execute [`TaskCompletionCommand`].
 ///
@@ -636,7 +627,7 @@ pub async fn execute_task_completion(
     tx: &mut Transaction<'_, Postgres>,
     cmd: &TaskCompletionCommand,
 ) -> CommandResult {
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "task", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -729,7 +720,6 @@ pub async fn execute_task_completion(
     Ok(outcome_applied(event_id, format!("task {} completed as {}", cmd.task_id, final_status_str)))
 }
 
-// ── CTL-011: Failure ingestion ─────────────────────────────────────────────
 
 /// Execute [`FailureIngestionCommand`].
 ///
@@ -738,7 +728,7 @@ pub async fn execute_failure_ingestion(
     tx: &mut Transaction<'_, Postgres>,
     cmd: &FailureIngestionCommand,
 ) -> CommandResult {
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "task", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -815,7 +805,6 @@ pub async fn execute_failure_ingestion(
     Ok(outcome_applied(event_id, format!("task {} failure recorded", cmd.task_id)))
 }
 
-// ── CTL-012: Timeout ingestion ─────────────────────────────────────────────
 
 /// Execute [`TimeoutIngestionCommand`].
 ///
@@ -825,7 +814,7 @@ pub async fn execute_timeout_ingestion(
     tx: &mut Transaction<'_, Postgres>,
     cmd: &TimeoutIngestionCommand,
 ) -> CommandResult {
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "task", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -897,7 +886,6 @@ pub async fn execute_timeout_ingestion(
     Ok(outcome_applied(event_id, format!("task {} timeout recorded", cmd.task_id)))
 }
 
-// ── CTL-013: Retry scheduling ──────────────────────────────────────────────
 
 /// Execute [`RetrySchedulingCommand`].
 ///
@@ -907,7 +895,7 @@ pub async fn execute_retry_scheduling(
     tx: &mut Transaction<'_, Postgres>,
     cmd: &RetrySchedulingCommand,
 ) -> CommandResult {
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "task", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {
@@ -1001,7 +989,6 @@ pub async fn execute_retry_scheduling(
     Ok(outcome_applied(event_id, format!("task {} retry scheduled (attempt {})", cmd.task_id, cmd.next_attempt_number)))
 }
 
-// ── CTL-015: Next cycle generation ─────────────────────────────────────────
 
 /// Execute [`NextCycleGenerationCommand`].
 ///
@@ -1011,7 +998,7 @@ pub async fn execute_next_cycle_generation(
     tx: &mut Transaction<'_, Postgres>,
     cmd: &NextCycleGenerationCommand,
 ) -> CommandResult {
-    // BND-010: idempotency check
+    // Idempotency check
     if let Some(_existing) = idempotency_check(tx, "cycle", &cmd.idempotency_key).await
         .map_err(|e| reject(CommandRejectionReason::PreconditionFailed, e.to_string()))?
     {

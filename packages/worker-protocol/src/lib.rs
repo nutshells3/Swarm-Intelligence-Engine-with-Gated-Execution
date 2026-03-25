@@ -12,12 +12,6 @@
 
 use serde::{Deserialize, Serialize};
 
-// ── WPR-001: Protocol version negotiation ────────────────────────────────
-//
-// CSV guardrail: "version negotiation simulation"
-// Workers and the control plane must agree on a protocol version before
-// exchanging any messages.
-
 /// Protocol version for envelope negotiation.
 /// Major-breaking changes increment major; additive changes increment minor.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -31,10 +25,6 @@ impl Default for ProtocolVersion {
         Self { major: 1, minor: 0 }
     }
 }
-
-// ── WPR-002: Worker capability declaration ───────────────────────────────
-//
-// Workers declare what task kinds they can handle and their resource limits.
 
 /// Declared capability of a worker, sent during registration.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -50,11 +40,6 @@ pub struct WorkerCapability {
     /// Whether this worker supports cancellation.
     pub supports_cancel: bool,
 }
-
-// ── WPR-003: Task request envelope ───────────────────────────────────────
-//
-// CSV guardrail: "envelope completeness check"
-// The full task dispatch message from control plane to worker.
 
 /// Provider mode for task execution.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -82,7 +67,7 @@ pub struct TaskCaution {
     pub description: String,
 }
 
-/// WPR-003 -- Task request dispatched from control plane to worker.
+/// Task request dispatched from control plane to worker.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskRequest {
     pub task_id: String,
@@ -106,11 +91,6 @@ pub struct TaskRequest {
     /// Cautions that the worker must respect.
     pub cautions: Vec<TaskCaution>,
 }
-
-// ── WPR-004: Task result envelope ────────────────────────────────────────
-//
-// CSV guardrail: "envelope completeness check"
-// The result message from worker back to control plane.
 
 /// Classification of the artifact produced by a task.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -138,7 +118,7 @@ pub struct TokenUsage {
     pub total_tokens: u32,
 }
 
-/// WPR-004 -- Task result returned from worker to control plane.
+/// Task result returned from worker to control plane.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskResult {
     pub task_id: String,
@@ -156,11 +136,7 @@ pub struct TaskResult {
     pub artifact_kind: Option<ArtifactKind>,
 }
 
-// ── WPR-005: Progress event ──────────────────────────────────────────────
-//
-// Streaming progress update from worker to control plane during execution.
-
-/// WPR-005 -- Progress event streamed during task execution.
+/// Progress event streamed during task execution.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ProgressEvent {
     pub task_id: String,
@@ -174,10 +150,6 @@ pub struct ProgressEvent {
     /// Timestamp in milliseconds since epoch.
     pub timestamp_ms: u64,
 }
-
-// ── WPR-006: Cancel request ──────────────────────────────────────────────
-//
-// Graceful cancellation request from control plane to worker.
 
 /// Reason for requesting cancellation.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -195,7 +167,7 @@ pub enum CancelReason {
     LeaseExpired,
 }
 
-/// WPR-006 -- Cancel request from control plane to worker.
+/// Cancel request from control plane to worker.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CancelRequest {
     pub task_id: String,
@@ -206,11 +178,7 @@ pub struct CancelRequest {
     pub grace_period_seconds: u32,
 }
 
-// ── WPR-007: Kill request ────────────────────────────────────────────────
-//
-// Immediate forced termination when cancel grace period is exceeded.
-
-/// WPR-007 -- Kill request for immediate forced termination.
+/// Kill request for immediate forced termination.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct KillRequest {
     pub task_id: String,
@@ -219,11 +187,7 @@ pub struct KillRequest {
     pub reason: CancelReason,
 }
 
-// ── WPR-008: Artifact reference ──────────────────────────────────────────
-//
-// Typed reference to an artifact produced or consumed by a task.
-
-/// WPR-008 -- Typed artifact reference.
+/// Typed artifact reference.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ArtifactReference {
     /// Unique artifact identifier.
@@ -238,10 +202,6 @@ pub struct ArtifactReference {
     pub size_bytes: u64,
 }
 
-// ── WPR-009: Warning payload ─────────────────────────────────────────────
-//
-// Structured warning emitted by a worker during execution.
-
 /// Severity of a worker warning.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -254,7 +214,7 @@ pub enum WarningSeverity {
     Severe,
 }
 
-/// WPR-009 -- Structured warning payload.
+/// Structured warning payload.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WarningPayload {
     pub task_id: String,
@@ -264,10 +224,6 @@ pub struct WarningPayload {
     /// Human-readable warning message.
     pub message: String,
 }
-
-// ── WPR-010: Error payload ───────────────────────────────────────────────
-//
-// Structured error emitted when a worker fails.
 
 /// Classification of worker errors.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -285,7 +241,7 @@ pub enum ErrorCategory {
     Timeout,
 }
 
-/// WPR-010 -- Structured error payload.
+/// Structured error payload.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ErrorPayload {
     pub task_id: String,
@@ -298,12 +254,7 @@ pub struct ErrorPayload {
     pub retryable: bool,
 }
 
-// ── WPR-011: Retryable failure ───────────────────────────────────────────
-//
-// Wraps a failure with retry metadata so the control plane can decide
-// whether to re-dispatch.
-
-/// WPR-011 -- Retryable failure with retry metadata.
+/// Retryable failure with retry metadata.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RetryableFailure {
     pub task_id: String,
@@ -316,11 +267,7 @@ pub struct RetryableFailure {
     pub suggested_backoff_ms: u64,
 }
 
-// ── WPR-012: Timeout result ──────────────────────────────────────────────
-//
-// Result returned when a task exceeds its timeout threshold.
-
-/// WPR-012 -- Timeout result with partial output capture.
+/// Timeout result with partial output capture.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TimeoutResult {
     pub task_id: String,
@@ -333,10 +280,6 @@ pub struct TimeoutResult {
     /// Whether the task was cleanly cancelled or force-killed.
     pub clean_shutdown: bool,
 }
-
-// ── WPR-013: Policy violation ────────────────────────────────────────────
-//
-// Reported when a worker action violates a governance policy.
 
 /// The kind of policy that was violated.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -356,7 +299,7 @@ pub enum PolicyKind {
     LeaseViolation,
 }
 
-/// WPR-013 -- Policy violation report.
+/// Policy violation report.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyViolation {
     pub task_id: String,
@@ -369,12 +312,6 @@ pub struct PolicyViolation {
     pub blocking: bool,
 }
 
-// ── WPR-014: Worker heartbeat (enhanced) ─────────────────────────────────
-//
-// CSV guardrail: "lifecycle simulation; heartbeat enforcement"
-// Workers must send heartbeats at regular intervals. Missing heartbeats
-// trigger stuck-worker detection.
-
 /// Resource usage snapshot reported in a heartbeat.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ResourceUsage {
@@ -386,7 +323,7 @@ pub struct ResourceUsage {
     pub tokens_consumed: u32,
 }
 
-/// WPR-014 -- Worker heartbeat with enhanced telemetry.
+/// Worker heartbeat with enhanced telemetry.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerHeartbeat {
     pub task_attempt_id: String,
@@ -400,11 +337,6 @@ pub struct WorkerHeartbeat {
     /// Resource usage snapshot.
     pub resource_usage: Option<ResourceUsage>,
 }
-
-// ── WPR-015: Protocol envelope wrapper ───────────────────────────────────
-//
-// All protocol messages are wrapped in a versioned envelope for
-// schema validation and version negotiation.
 
 /// The kind of message carried in a protocol envelope.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -421,7 +353,7 @@ pub enum EnvelopeKind {
     PolicyViolation,
 }
 
-/// WPR-015 -- Versioned protocol envelope wrapping all messages.
+/// Versioned protocol envelope wrapping all messages.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ProtocolEnvelope {
     /// Protocol version for negotiation.
@@ -437,11 +369,6 @@ pub struct ProtocolEnvelope {
     /// ISO-8601 timestamp of envelope creation.
     pub timestamp: String,
 }
-
-// ── WPR-016: Peer messaging ──────────────────────────────────────────────
-//
-// Peer-to-peer messaging between agents/workers. All messages are recorded
-// in event_journal for full reproducibility -- no off-the-record communication.
 
 /// Peer-to-peer message between agents/workers.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

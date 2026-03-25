@@ -20,8 +20,6 @@ use crate::normalize::{
     extract_codex_exec_content, normalize_output, NormalizationPolicy, NormalizationResult,
 };
 
-// ── Codex-specific config types (preserved from ADT-002/003) ─────────────
-
 /// Codex-specific request configuration layered on top of AdapterInput.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CodexRequestConfig {
@@ -55,8 +53,6 @@ pub struct CodexResponseMeta {
     /// Whether the session completed successfully.
     pub session_success: bool,
 }
-
-// ── Codex CLI Adapter ────────────────────────────────────────────────────
 
 /// Adapter that invokes the `codex` CLI as a subprocess.
 pub struct CodexCliAdapter {
@@ -133,7 +129,7 @@ impl AgentAdapter for CodexCliAdapter {
         let task_id = request.task_id.clone();
         let policy = NormalizationPolicy::default();
 
-        // ADT-006: Up to 2 retries on empty output (3 total attempts).
+        // Up to 2 retries on empty output (3 total attempts).
         const MAX_RETRIES: u32 = 2;
 
         let mut stdout_raw = String::new();
@@ -187,7 +183,7 @@ impl AgentAdapter for CodexCliAdapter {
         let duration_ms = start.elapsed().as_millis() as u64;
         let finished_at = chrono::Utc::now();
 
-        // ADT-006: Extract response content from codex exec multi-section output.
+        // Extract response content from codex exec multi-section output.
         // Codex exec produces structured output with a "codex" section header,
         // the actual response, and then metadata lines (model, tokens used, etc.).
         let extracted_content = extract_codex_exec_content(&stdout_raw);
@@ -216,5 +212,4 @@ impl AgentAdapter for CodexCliAdapter {
     }
 }
 
-// Legacy type alias for backward compatibility with existing imports.
 pub type CodexAdapter = CodexCliAdapter;

@@ -13,8 +13,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── REC-001: Objective classification ────────────────────────────────────
-
 /// Classifies whether an objective is ordinary work or self-improvement.
 /// Self-improvement objectives require additional safety gates and
 /// audit trail (CSV: "distinguish from ordinary objectives").
@@ -50,7 +48,7 @@ pub enum TrustBoundaryImpact {
     MultipleBoundaries,
 }
 
-/// REC-001 -- Self-improvement objective.
+/// Self-improvement objective.
 ///
 /// A distinct objective type that captures repo target binding and
 /// trust-boundary impact.  Every field required for audit trail

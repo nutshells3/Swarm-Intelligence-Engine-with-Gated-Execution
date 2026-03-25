@@ -1,9 +1,7 @@
-//! Observability schemas for metrics, sidecars, and projections (M6).
+//! Observability schemas for metrics, sidecars, and projections.
 //!
 //! This crate defines the durable, machine-readable metrics types for
 //! cycles, tasks, costs, tokens, worker success rates, and saturation.
-//!
-//! Items: OBS-001 through OBS-010.
 //!
 //! Key design rules:
 //! - Projection-only counters (OBS-010) are never mixed with authoritative

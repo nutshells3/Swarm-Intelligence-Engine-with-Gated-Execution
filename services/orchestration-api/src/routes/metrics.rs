@@ -11,8 +11,6 @@ use sqlx::Row;
 use crate::error::{ApiResult, internal_error};
 use crate::state::AppState;
 
-// ── Response types ──────────────────────────────────────────────────────
-
 #[derive(Serialize, utoipa::ToSchema)]
 pub struct CycleMetric {
     pub cycle_id: String,
@@ -69,14 +67,12 @@ pub struct SaturationMetrics {
     pub running_tasks: i64,
     pub active_workers: i64,
     pub queue_pressure: f64,
-    /// OBS-010: Worker success rate summary (from worker_success_rates table).
+    /// Worker success rate summary (from worker_success_rates table).
     /// Null when no data exists yet.
     pub worker_success_rate: Option<f64>,
-    /// OBS-010: Total worker attempts across all roles. Zero when no data.
+    /// Total worker attempts across all roles. Zero when no data.
     pub worker_total_attempts: i64,
 }
-
-// ── GET /api/metrics/cycles ─────────────────────────────────────────────
 
 #[utoipa::path(
     get,
@@ -130,8 +126,6 @@ pub async fn cycle_metrics(
     Ok(Json(results))
 }
 
-// ── GET /api/metrics/tasks ──────────────────────────────────────────────
-
 #[utoipa::path(
     get,
     path = "/api/metrics/tasks",
@@ -178,8 +172,6 @@ pub async fn task_metrics(
     }))
 }
 
-// ── GET /api/metrics/costs ──────────────────────────────────────────────
-
 #[utoipa::path(
     get,
     path = "/api/metrics/costs",
@@ -207,8 +199,6 @@ pub async fn cost_metrics(
         total_output_tokens: row.try_get("total_output_tokens").map_err(internal_error)?,
     }))
 }
-
-// ── GET /api/metrics/tokens ─────────────────────────────────────────────
 
 #[utoipa::path(
     get,
@@ -251,8 +241,6 @@ pub async fn token_metrics(
             .map_err(internal_error)?,
     }))
 }
-
-// ── GET /api/metrics/workers ────────────────────────────────────────────
 
 #[utoipa::path(
     get,
@@ -301,8 +289,6 @@ pub async fn worker_metrics(
     Ok(Json(results))
 }
 
-// ── GET /api/metrics/saturation ─────────────────────────────────────────
-
 #[utoipa::path(
     get,
     path = "/api/metrics/saturation",
@@ -313,8 +299,6 @@ pub async fn worker_metrics(
 pub async fn saturation_metrics(
     State(state): State<AppState>,
 ) -> ApiResult<SaturationMetrics> {
-    // OBS-010: Query tasks table for saturation counts.
-    // Propagate query errors rather than silently returning zeros.
     let task_row = sqlx::query(
         r#"SELECT
              COUNT(*) FILTER (WHERE status = 'queued') as queued_tasks,
@@ -337,8 +321,6 @@ pub async fn saturation_metrics(
         0.0
     };
 
-    // OBS-010: Also query worker_success_rates if data exists.
-    // Propagate query errors rather than silently returning zeros.
     let wsr_row = sqlx::query(
         r#"SELECT
              COALESCE(SUM(total_attempts), 0) as total_attempts,

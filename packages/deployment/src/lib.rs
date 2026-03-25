@@ -1,9 +1,7 @@
-//! Deployment and update schemas (M6).
+//! Deployment and update schemas.
 //!
 //! This crate defines deployment modes, remote endpoints, update channels,
 //! migration compatibility, routing resolution, and related adapter types.
-//!
-//! Items: DEP-001 through DEP-012.
 //!
 //! Key design rules:
 //! - Deployment mode is a first-class typed enum, never hidden in env vars.

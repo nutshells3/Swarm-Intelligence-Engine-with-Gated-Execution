@@ -65,29 +65,24 @@ export default function Layout() {
         overflow: 'hidden',
       }}
     >
-      {/* Top bar spans all columns */}
       <div style={{ gridColumn: '1 / -1', gridRow: '1' }}>
         <TopBar />
       </div>
 
-      {/* Left rail */}
       <div style={{ gridColumn: '1', gridRow: '2 / -1', overflow: 'auto' }}>
         <Rail />
       </div>
 
-      {/* Main panel */}
       <div style={{ gridColumn: '2', gridRow: '2', overflow: 'auto' }}>
         <MainPanel />
       </div>
 
-      {/* Right inspector */}
       {inspectorOpen && (
         <div style={{ gridColumn: '3', gridRow: '2', overflow: 'auto' }}>
           <Inspector />
         </div>
       )}
 
-      {/* Bottom drawer spans main + inspector */}
       {drawerOpen && (
         <div style={{ gridColumn: '2 / -1', gridRow: '3', overflow: 'auto' }}>
           <Drawer />

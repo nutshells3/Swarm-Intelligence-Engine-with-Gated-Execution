@@ -13,8 +13,6 @@ use std::fmt;
 
 use crate::gateway::{CertificationCandidate, CertificationEligibility};
 
-// ── Certification frequency policy ──────────────────────────────────────
-
 /// Controls how aggressively the system submits candidates for certification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -39,8 +37,6 @@ impl fmt::Display for CertificationFrequency {
         }
     }
 }
-
-// ── Gateway error ───────────────────────────────────────────────────────
 
 /// Errors returned by the formal-claim CLI gateway.
 #[derive(Debug)]
@@ -81,8 +77,6 @@ impl From<std::io::Error> for GatewayError {
     }
 }
 
-// ── Result types ────────────────────────────────────────────────────────
-
 /// Result of structuring and submitting a claim through the CLI.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimSubmissionResult {
@@ -106,8 +100,6 @@ pub struct AuditResult {
     /// The promotion state after the audit.
     pub promotion_state: serde_json::Value,
 }
-
-// ── Gateway ─────────────────────────────────────────────────────────────
 
 /// Gateway to the `formal-claim` CLI tool.
 ///

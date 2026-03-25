@@ -12,8 +12,6 @@ use uuid::Uuid;
 use crate::error::{ApiResult, bad_request, internal_error, not_found};
 use crate::state::AppState;
 
-// ── Valid task-status transitions ───────────────────────────────────────
-
 /// Returns `true` when `from -> to` is a legal task status transition.
 fn is_valid_task_transition(from: &str, to: &str) -> bool {
     matches!(
@@ -48,8 +46,6 @@ fn node_lifecycle_for_task_status(status: &str) -> &'static str {
         _ => "proposed",
     }
 }
-
-// ── POST /api/tasks/{task_id}/complete ──────────────────────────────────
 
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CompleteTaskRequest {
@@ -213,8 +209,6 @@ pub async fn complete_task(
     }))
 }
 
-// ── POST /api/tasks/{task_id}/fail ──────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct FailTaskRequest {
     /// Human-readable error message.
@@ -329,8 +323,6 @@ pub async fn fail_task(
         artifacts_stored: 0,
     }))
 }
-
-// ── PATCH /api/tasks/{task_id} ──────────────────────────────────────────
 
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct PatchTaskRequest {
@@ -483,8 +475,6 @@ pub async fn patch_task(
         artifacts_stored,
     }))
 }
-
-// ── POST /api/task-attempts/{attempt_id}/complete ───────────────────────
 
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CompleteAttemptRequest {
@@ -672,8 +662,6 @@ pub async fn complete_attempt(
         artifacts_stored,
     }))
 }
-
-// ── Dependency unblocking ───────────────────────────────────────────────
 
 /// After a node completes, find dependent tasks that are now unblocked
 /// (all their predecessor nodes are done) and set them to 'running'

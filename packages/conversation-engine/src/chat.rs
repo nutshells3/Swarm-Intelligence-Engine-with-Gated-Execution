@@ -14,9 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::extract::ConversationExtract;
 use crate::pipeline::PipelineError;
 
-// ── CHAT-001: Chat session schema ────────────────────────────────────
-
-/// CHAT-001: A chat session groups related messages together.
+/// A chat session groups related messages together.
 ///
 /// Maps to the `chat_sessions` table. A session may optionally
 /// be linked to an objective for scoped conversations.
@@ -32,8 +30,6 @@ pub struct ChatSession {
     pub updated_at: DateTime<Utc>,
 }
 
-// ── CHAT-002: Chat message schema ────────────────────────────────────
-
 /// The role of the message sender.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -46,7 +42,7 @@ pub enum MessageRole {
     System,
 }
 
-/// CHAT-002: A single message within a chat session.
+/// A single message within a chat session.
 ///
 /// Maps to the `chat_messages` table.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -63,8 +59,6 @@ pub struct ChatMessage {
     pub created_at: DateTime<Utc>,
 }
 
-// ── CHAT-003: Chat-to-objective extraction hook ──────────────────────
-
 /// A proposed objective derived from chat.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ObjectiveProposal {
@@ -76,7 +70,7 @@ pub struct ObjectiveProposal {
     pub source_message_ids: Vec<String>,
 }
 
-/// CHAT-003: Hook for extracting objective proposals from chat.
+/// Hook for extracting objective proposals from chat.
 ///
 /// Does not create objectives directly; produces proposals that
 /// feed into the control-plane objective creation flow.
@@ -88,8 +82,6 @@ pub trait ChatToObjectiveHook {
         messages: &[ChatMessage],
     ) -> Result<Vec<ObjectiveProposal>, PipelineError>;
 }
-
-// ── CHAT-004: Chat-to-task extraction hook ───────────────────────────
 
 /// A proposed task derived from chat.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -104,7 +96,7 @@ pub struct TaskProposal {
     pub source_message_ids: Vec<String>,
 }
 
-/// CHAT-004: Hook for extracting task proposals from chat.
+/// Hook for extracting task proposals from chat.
 ///
 /// Does not create tasks directly; produces proposals that
 /// must go through decomposition and dispatch phases.
@@ -117,8 +109,6 @@ pub trait ChatToTaskHook {
     ) -> Result<Vec<TaskProposal>, PipelineError>;
 }
 
-// ── CHAT-005: Chat-to-plan extraction hook ───────────────────────────
-
 /// A proposed plan element derived from chat.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PlanProposal {
@@ -130,7 +120,7 @@ pub struct PlanProposal {
     pub source_message_ids: Vec<String>,
 }
 
-/// CHAT-005: Hook for extracting plan proposals from chat.
+/// Hook for extracting plan proposals from chat.
 ///
 /// Does not create plans directly; produces proposals that
 /// feed into plan elaboration and validation phases.
@@ -143,9 +133,7 @@ pub trait ChatToPlanHook {
     ) -> Result<Vec<PlanProposal>, PipelineError>;
 }
 
-// ── CHAT-006: Chat session persistence (trait) ───────────────────────
-
-/// CHAT-006: Persistence interface for chat sessions and messages.
+/// Persistence interface for chat sessions and messages.
 ///
 /// Implementations will provide the actual storage backend
 /// (e.g., PostgreSQL via sqlx). This trait ensures the conversation
@@ -173,9 +161,7 @@ pub trait ChatPersistence {
     ) -> Result<Vec<ConversationExtract>, PipelineError>;
 }
 
-// ── CHAT-007: Chat history projection ────────────────────────────────
-
-/// CHAT-007: A projected view of chat history.
+/// A projected view of chat history.
 ///
 /// Provides a read-optimized view of a session's messages,
 /// including optional filtering and windowing for context
@@ -231,8 +217,6 @@ pub trait ChatProjector {
     ) -> Result<ChatProjection, PipelineError>;
 }
 
-// ── CHAT-008: Chat-to-state update rules ─────────────────────────────
-
 /// The kind of state mutation a chat update rule proposes.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -267,7 +251,7 @@ pub struct StateUpdateProposal {
     pub requires_approval: bool,
 }
 
-/// CHAT-008: Rules engine for determining which state updates
+/// Rules engine for determining which state updates
 /// should be proposed from a conversation extract.
 ///
 /// Caution: implementations must not bypass control-plane state
@@ -280,9 +264,7 @@ pub trait ChatStateUpdateRules {
     ) -> Result<Vec<StateUpdateProposal>, PipelineError>;
 }
 
-// ── CHAT-009: Chat provenance capture ────────────────────────────────
-
-/// CHAT-009: Provenance record linking a state change back to
+/// Provenance record linking a state change back to
 /// the chat interaction that caused it.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChatProvenance {
@@ -318,8 +300,6 @@ pub trait ChatProvenanceCapture {
     ) -> Result<Vec<ChatProvenance>, PipelineError>;
 }
 
-// ── CHAT-010: UI chat panel data model ───────────────────────────────
-
 /// The status of a chat panel in the UI.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -334,7 +314,7 @@ pub enum ChatPanelStatus {
     Error,
 }
 
-/// CHAT-010: Data model for a UI chat panel.
+/// Data model for a UI chat panel.
 ///
 /// This is the data-only model; no actual UI rendering is included.
 /// UI layers consume this model to display chat state.

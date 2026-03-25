@@ -7,8 +7,6 @@ use uuid::Uuid;
 use crate::error::{ApiResult, internal_error, not_found};
 use crate::state::AppState;
 
-// ── Tasks ───────────────────────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateTaskRequest {
     pub node_id: String,
@@ -44,7 +42,7 @@ pub async fn create_task(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let task_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'task' and idempotency_key = $1 limit 1",
     )
@@ -204,8 +202,6 @@ pub async fn list_tasks(
     Ok(Json(results))
 }
 
-// ── Task Attempts ───────────────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateTaskAttemptRequest {
     pub task_id: String,
@@ -240,7 +236,7 @@ pub async fn create_task_attempt(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let attempt_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'task_attempt' and idempotency_key = $1 limit 1",
     )

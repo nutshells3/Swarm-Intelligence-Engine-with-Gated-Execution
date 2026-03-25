@@ -35,11 +35,9 @@ use ui_models::projections::{
     CertificationQueueProjection as CanonicalCertificationQueueProjection,
 };
 
-// ── Projection summary types ────────────────────────────────────────────
-
 /// Summary of tasks by status, computed from the tasks table.
 ///
-/// **Canonical type (CD-04):** `ui_models::projections::TaskBoardProjection` (RDM-001).
+/// **Canonical type:** `ui_models::projections::TaskBoardProjection`.
 ///
 /// **Mapping:** The canonical type carries a `Vec<TaskBoardItem>` with per-task
 /// detail, typed `TaskStatus` enum, and `DateTime<Utc>` timestamps. This
@@ -101,8 +99,6 @@ pub struct CertificationQueueProjection {
     pub count: i64,
 }
 
-// ── Adapter functions: canonical -> summary ─────────────────────────────
-//
 // These convert ui-models canonical projections into the flat summary
 // shapes used by the rebuild/summary endpoints. Implemented as free
 // functions rather than From impls to avoid orphan-rule violations on
@@ -195,8 +191,6 @@ pub struct ProjectionRebuildResponse {
     pub certification_queue: Vec<CertificationQueueProjection>,
     pub total_events_scanned: i64,
 }
-
-// ── POST /api/projections/rebuild ───────────────────────────────────────
 
 /// Rebuild all read-model projections from the current database state.
 ///
@@ -302,8 +296,6 @@ pub async fn rebuild_projections(
     }))
 }
 
-// ── GET /api/projections/task-board ─────────────────────────────────────
-
 /// Get the current task board projection (tasks by status).
 ///
 /// Canonical type: `ui_models::projections::TaskBoardProjection` (RDM-001).
@@ -330,8 +322,6 @@ pub async fn get_task_board_projection(
 
     Ok(Json(results))
 }
-
-// ── GET /api/projections/branch-mainline ────────────────────────────────
 
 /// Get the current branch/mainline projection (nodes by lane).
 ///
@@ -360,8 +350,6 @@ pub async fn get_branch_mainline_projection(
     Ok(Json(results))
 }
 
-// ── GET /api/projections/review-queue ───────────────────────────────────
-
 /// Get the current review queue projection (reviews by status).
 ///
 /// Canonical type: `ui_models::projections::ReviewQueueProjection` (RDM-004).
@@ -388,8 +376,6 @@ pub async fn get_review_queue_projection(
 
     Ok(Json(results))
 }
-
-// ── GET /api/projections/certification-queue ────────────────────────────
 
 /// Get the current certification queue projection (submissions by status).
 ///

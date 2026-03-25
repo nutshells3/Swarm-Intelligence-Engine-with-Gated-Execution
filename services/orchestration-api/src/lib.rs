@@ -437,7 +437,6 @@ pub async fn build_app(
             "/api/roadmap/nodes/{id}/track",
             axum::routing::patch(routes::roadmap::change_track),
         )
-        // RMS-010: Roadmap projection
         .route(
             "/api/projections/roadmap",
             get(routes::roadmap::roadmap_projection),
@@ -471,7 +470,7 @@ pub async fn build_app(
             axum::routing::post(routes::reviews::create_review)
                 .get(routes::reviews::list_reviews),
         )
-        // REV-019: Human digest summary (must precede {id} wildcard)
+        // Human digest summary (must precede {id} wildcard)
         .route(
             "/api/reviews/digest",
             get(routes::reviews::review_digest),
@@ -525,7 +524,6 @@ pub async fn build_app(
             "/api/certification/results/{submission_id}",
             get(routes::certification::get_certification_result),
         )
-        // DEP-012: Deployment config
         .route(
             "/api/deployment/config",
             get(routes::deployment::get_deployment_config)
@@ -595,17 +593,14 @@ pub async fn build_app(
             "/api/projections/objective-progress",
             get(routes::projections::objective_progress),
         )
-        // RDM-006: Drift projection
         .route(
             "/api/projections/drift",
             get(routes::projections::drift),
         )
-        // RDM-009: Loop history projection
         .route(
             "/api/projections/loop-history",
             get(routes::projections::loop_history),
         )
-        // RDM-010: Artifact timeline projection
         .route(
             "/api/projections/artifact-timeline",
             get(routes::projections::artifact_timeline),

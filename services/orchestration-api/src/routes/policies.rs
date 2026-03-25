@@ -162,8 +162,6 @@ pub async fn create_policy_snapshot(
     }))
 }
 
-// ── Gap 6: Certification toggle ─────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CertificationSettingsRequest {
     pub enabled: bool,

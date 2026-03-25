@@ -24,8 +24,6 @@ use std::sync::Arc;
 use crate::adapter::{AdapterRequest, AdapterResponse};
 use crate::registry::BoxedAdapter;
 
-// ── SPN-001: Spawn configuration and handle types ────────────────────────
-
 /// Configuration for spawning an agent.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpawnConfig {
@@ -102,8 +100,6 @@ pub struct SpawnResult {
     pub handle: SpawnHandle,
 }
 
-// ── SPN-001: The core SpawnBackend trait ──────────────────────────────────
-
 /// Pluggable backend for spawning and managing agent processes.
 ///
 /// Implementors decide *how* an agent is run (subprocess, tmux, container,
@@ -139,8 +135,6 @@ pub trait SpawnBackend: Send + Sync {
     fn name(&self) -> &str;
 }
 
-// ── SPN-002: SubprocessSpawnBackend ──────────────────────────────────────
-
 /// Subprocess-based spawn backend.
 ///
 /// Wraps the existing `BoxedAdapter::invoke_boxed()` call. Each spawn runs
@@ -152,7 +146,6 @@ pub trait SpawnBackend: Send + Sync {
 /// combines spawn handle creation with adapter invocation.
 pub struct SubprocessSpawnBackend {
     adapter: Arc<dyn BoxedAdapter>,
-    /// SPN-002: Stored configs indexed by spawn_id for wait() to retrieve.
     pending_configs: std::sync::Mutex<std::collections::HashMap<String, SpawnConfig>>,
 }
 
@@ -165,7 +158,7 @@ impl SubprocessSpawnBackend {
         }
     }
 
-    /// SPN-002: Combined spawn-and-wait that is the actual main execution path.
+    /// Combined spawn-and-wait that is the actual main execution path.
     ///
     /// This is the preferred entry point: it spawns the agent (creating a
     /// handle) and immediately invokes the adapter, returning both the handle
@@ -184,7 +177,7 @@ impl SubprocessSpawnBackend {
         })
     }
 
-    /// SPN-006: Spawn using a CommandPrepManifest with prompt delivery mode.
+    /// Spawn using a CommandPrepManifest with prompt delivery mode.
     ///
     /// This extends `spawn_and_wait` by applying the manifest's
     /// `prompt_delivery` mode to the adapter request. Without this, the
@@ -240,7 +233,7 @@ impl SpawnBackend for SubprocessSpawnBackend {
     async fn spawn(&self, config: SpawnConfig) -> Result<SpawnHandle, SpawnError> {
         let spawn_id = uuid::Uuid::now_v7().to_string();
 
-        // SPN-002: Store the config so wait() can retrieve it.
+        // Store the config so wait() can retrieve it.
         if let Ok(mut pending) = self.pending_configs.lock() {
             pending.insert(spawn_id.clone(), config.clone());
         }
@@ -267,7 +260,7 @@ impl SpawnBackend for SubprocessSpawnBackend {
     }
 
     async fn wait(&self, handle: &SpawnHandle) -> Result<SpawnResult, SpawnError> {
-        // SPN-002: Retrieve the stored config and invoke the adapter.
+        // Retrieve the stored config and invoke the adapter.
         let config = {
             let mut pending = self.pending_configs.lock().map_err(|e| SpawnError {
                 message: format!("Failed to lock pending configs: {}", e),
@@ -300,9 +293,7 @@ impl SpawnBackend for SubprocessSpawnBackend {
     }
 }
 
-// ── SPN-003: TmuxSpawnBackend (trait definition, not implemented) ────────
-
-/// Tmux-based spawn backend (SPN-003).
+/// Tmux-based spawn backend.
 ///
 /// Would spawn the agent inside a named tmux session, allowing the operator
 /// to attach for debugging and the agent to survive brief orchestrator restarts.
@@ -317,9 +308,7 @@ impl SpawnBackend for SubprocessSpawnBackend {
 /// ```
 pub struct TmuxSpawnBackend;
 
-// ── SPN-004: ContainerSpawnBackend (trait definition, not implemented) ───
-
-/// Container-based spawn backend (SPN-004).
+/// Container-based spawn backend.
 ///
 /// Would spawn the agent inside a Docker or Podman container, providing
 /// full filesystem and network isolation.
@@ -334,9 +323,7 @@ pub struct TmuxSpawnBackend;
 /// ```
 pub struct ContainerSpawnBackend;
 
-// ── SPN-005: RemoteSshSpawnBackend (trait definition, not implemented) ───
-
-/// Remote SSH spawn backend (SPN-005).
+/// Remote SSH spawn backend.
 ///
 /// Would spawn the agent on a remote host via SSH, useful for distributing
 /// work across multiple machines.
@@ -351,9 +338,7 @@ pub struct ContainerSpawnBackend;
 /// ```
 pub struct RemoteSshSpawnBackend;
 
-// ── SPN-006: KubernetesSpawnBackend (trait definition, not implemented) ──
-
-/// Kubernetes Job spawn backend (SPN-006).
+/// Kubernetes Job spawn backend.
 ///
 /// Would create a Kubernetes Job resource for each agent invocation,
 /// leveraging cluster scheduling and resource limits.
@@ -368,9 +353,7 @@ pub struct RemoteSshSpawnBackend;
 /// ```
 pub struct KubernetesSpawnBackend;
 
-// ── SPN-007: WasmSpawnBackend (trait definition, not implemented) ────────
-
-/// WASI sandbox spawn backend (SPN-007).
+/// WASI sandbox spawn backend.
 ///
 /// Would run the agent CLI compiled to WASI inside a Wasm runtime (wasmtime,
 /// wasmer), providing strong sandboxing with capability-based I/O.
@@ -378,9 +361,7 @@ pub struct KubernetesSpawnBackend;
 /// Not yet implemented.
 pub struct WasmSpawnBackend;
 
-// ── SPN-008: NixSpawnBackend (trait definition, not implemented) ─────────
-
-/// Nix shell spawn backend (SPN-008).
+/// Nix shell spawn backend.
 ///
 /// Would wrap the agent invocation in `nix-shell` or `nix develop`, ensuring
 /// a reproducible environment with pinned dependencies.
@@ -388,9 +369,7 @@ pub struct WasmSpawnBackend;
 /// Not yet implemented.
 pub struct NixSpawnBackend;
 
-// ── SPN-009: FirecrackerSpawnBackend (trait definition, not implemented) ─
-
-/// Firecracker microVM spawn backend (SPN-009).
+/// Firecracker microVM spawn backend.
 ///
 /// Would spawn the agent inside a Firecracker microVM for strong isolation
 /// with near-native performance.
@@ -398,9 +377,7 @@ pub struct NixSpawnBackend;
 /// Not yet implemented.
 pub struct FirecrackerSpawnBackend;
 
-// ── SPN-010: PooledSpawnBackend (trait definition, not implemented) ──────
-
-/// Pooled process spawn backend (SPN-010).
+/// Pooled process spawn backend.
 ///
 /// Would maintain a pool of warm agent processes that can be reused across
 /// invocations, reducing cold-start latency.
@@ -415,31 +392,7 @@ pub struct FirecrackerSpawnBackend;
 /// ```
 pub struct PooledSpawnBackend;
 
-// ═══════════════════════════════════════════════════════════════════════════
-// G2 Worker Spawn Runtime — additive patch (bundle-04a)
-//
-// SPN-004: CLI adapter bridge contract
-// SPN-005: Command normalization + permission policy
-// SPN-006: Prompt delivery modes
-// SPN-007: Spawn → registration bootstrap bridge
-// SPN-008: Readiness handoff
-// SPN-009: Runtime environment preparation
-//
-// Invariants:
-//   1. Spawn does NOT replace registration — it bridges INTO WRK-001
-//   2. No new process-launch hardcode in dispatch or adapter internals
-//   3. Runtime bindings use typed manifest, NOT ambient env mutation
-//   4. Launch success ≠ worker readiness (readiness needs heartbeat)
-// ═══════════════════════════════════════════════════════════════════════════
-
 use crate::adapter::AgentKind;
-
-// ── SPN-004: CLI adapter bridge contract ──────────────────────────────────
-//
-// The custom CLI adapter (ADT-016) produces a CommandPrepManifest instead
-// of directly launching. SubprocessSpawnBackend consumes it. This separates
-// adapter-level semantics from native command preparation so built-in and
-// custom CLI agents map to the same launch manifest.
 
 /// How stdin should be provided to the spawned process.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -453,7 +406,7 @@ pub enum StdinMode {
     FileInput(String),
 }
 
-/// Typed command-preparation manifest produced by adapters (SPN-004).
+/// Typed command-preparation manifest produced by adapters.
 ///
 /// Adapters produce this instead of directly launching processes.
 /// The spawn backend consumes it to perform the actual launch.
@@ -474,17 +427,11 @@ pub struct CommandPrepManifest {
     pub timeout_seconds: u64,
     /// Kind of agent being spawned.
     pub agent_kind: AgentKind,
-    /// How the prompt is delivered to the agent (SPN-006).
+    /// How the prompt is delivered to the agent.
     pub prompt_delivery: PromptDeliveryMode,
 }
 
-// ── SPN-005: Command normalization + permission policy ────────────────────
-//
-// Normalization: validate command exists, apply timeout from policy,
-// strip disallowed env vars. Permission policy controls what the spawned
-// process is allowed to do.
-
-/// Permission policy applied during command normalization (SPN-005).
+/// Permission policy applied during command normalization.
 ///
 /// Controls what the spawned agent process is allowed to do.
 /// The normalize_command function uses this to constrain the manifest.
@@ -521,7 +468,7 @@ const DISALLOWED_ENV_PREFIXES: &[&str] = &[
     "SWARM_SECRET_",
 ];
 
-/// Normalize a command-prep manifest against a permission policy (SPN-005).
+/// Normalize a command-prep manifest against a permission policy.
 ///
 /// - Validates the command is non-empty
 /// - Caps timeout to `policy.max_duration_seconds`
@@ -585,13 +532,7 @@ pub fn normalize_command(
     })
 }
 
-// ── SPN-006: Prompt delivery modes ────────────────────────────────────────
-//
-// Different CLI agents accept prompts differently. This enum makes the
-// delivery mode explicit so interactive and non-interactive CLIs are
-// launched under one contract without losing or duplicating task instructions.
-
-/// How the prompt/instruction is delivered to the spawned agent (SPN-006).
+/// How the prompt/instruction is delivered to the spawned agent.
 ///
 /// The spawn backend uses this to decide whether to pipe the prompt
 /// to stdin, pass it as a CLI argument, or write it to a temp file.
@@ -612,14 +553,7 @@ impl Default for PromptDeliveryMode {
     }
 }
 
-// ── SPN-007: Spawn → registration bootstrap bridge ────────────────────────
-//
-// Produces a result that WRK-001 registration can consume. It does NOT
-// perform registration itself. The bridge provides proposed_worker_id and
-// capabilities so the registration layer can accept or reject the spawned
-// worker.
-
-/// Result of bootstrapping a spawned worker for registration (SPN-007).
+/// Result of bootstrapping a spawned worker for registration.
 ///
 /// Contains everything the WRK-001 registration flow needs to register
 /// the newly spawned worker. The spawn layer proposes identity and
@@ -638,7 +572,7 @@ pub struct SpawnBootstrapResult {
     pub registration_token: Option<String>,
 }
 
-/// Bootstrap a spawned worker, producing a registration-ready result (SPN-007).
+/// Bootstrap a spawned worker, producing a registration-ready result.
 ///
 /// This bridges spawn into WRK-001 registration. It does NOT perform
 /// registration itself — it prepares the handoff data.
@@ -693,12 +627,7 @@ pub async fn bootstrap_spawned_worker(
     })
 }
 
-// ── SPN-008: Readiness handoff ────────────────────────────────────────────
-//
-// Launch success ≠ worker readiness. This checks whether the spawned
-// process has actually become ready (alive + heartbeat within timeout).
-
-/// Readiness status of a spawned worker (SPN-008).
+/// Readiness status of a spawned worker.
 ///
 /// A spawned process goes through: Pending → Ready or Failed/Timeout.
 /// The dispatch layer must not treat a live PID as a ready worker.
@@ -715,7 +644,7 @@ pub enum ReadinessStatus {
     Timeout,
 }
 
-/// Check readiness of a spawned worker (SPN-008).
+/// Check readiness of a spawned worker.
 ///
 /// Simple liveness check: if the process is no longer alive, it failed.
 /// If it has been running for longer than `timeout_ms` without a
@@ -744,13 +673,7 @@ pub async fn check_readiness<B: SpawnBackend>(
     ReadinessStatus::Pending
 }
 
-// ── SPN-009: Runtime environment preparation ──────────────────────────────
-//
-// Converts a typed manifest into concrete env vars for the spawned process.
-// No ambient mutation — returns the env map. Policy, worktree, skill,
-// and secret bindings are all expressed as typed fields.
-
-/// Typed runtime binding manifest for a spawned worker (SPN-009).
+/// Typed runtime binding manifest for a spawned worker.
 ///
 /// This is the single source of truth for what environment the spawned
 /// process should see. It replaces ad-hoc env mutation with an explicit,
@@ -777,7 +700,7 @@ pub struct RuntimeBindingManifest {
     pub timeout_seconds: u64,
 }
 
-/// Prepare the runtime environment for a spawned worker (SPN-009).
+/// Prepare the runtime environment for a spawned worker.
 ///
 /// Converts the typed RuntimeBindingManifest into a flat list of
 /// environment variable key-value pairs. No ambient env mutation —

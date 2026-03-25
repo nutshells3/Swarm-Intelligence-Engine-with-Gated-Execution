@@ -29,7 +29,7 @@ pub enum InvocationOutcome {
     Cancelled,
 }
 
-/// ADT-008 -- Durable provenance record for a single adapter invocation.
+/// Durable provenance record for a single adapter invocation.
 ///
 /// Every call through an AgentAdapter produces exactly one of these records.
 /// The record is persisted to the `adapter_invocations` table and is never
@@ -69,8 +69,6 @@ pub struct ProvenanceRecord {
     /// Timestamp of invocation completion.
     pub completed_at: DateTime<Utc>,
 }
-
-// ── ADT-008: Persist AdapterProvenance to adapter_invocations ─────────
 
 /// Record an adapter invocation in the `adapter_invocations` table.
 ///

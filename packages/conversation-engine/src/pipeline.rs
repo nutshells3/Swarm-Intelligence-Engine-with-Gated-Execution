@@ -17,8 +17,6 @@ use crate::extract::{
     ConversationExtract, ExtractedConstraint, ExtractedDesignDecision, ExtractedOpenQuestion,
 };
 
-// ── Pipeline error ───────────────────────────────────────────────────
-
 /// Error type for pipeline operations.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PipelineError {
@@ -36,9 +34,7 @@ impl fmt::Display for PipelineError {
 
 impl std::error::Error for PipelineError {}
 
-// ── CONV-005: Conversation summarization pipeline ────────────────────
-
-/// CONV-005: Summarize a sequence of chat messages into a
+/// Summarize a sequence of chat messages into a
 /// structured ConversationExtract.
 ///
 /// This is the top-level entry point for the extraction pipeline.
@@ -53,9 +49,7 @@ pub trait ConversationSummarizer {
     ) -> Result<ConversationExtract, PipelineError>;
 }
 
-// ── CONV-006: Constraint extraction ──────────────────────────────────
-
-/// CONV-006: Extract constraints from a conversation extract
+/// Extract constraints from a conversation extract
 /// or directly from messages.
 pub trait ConstraintExtractor {
     /// Extract constraints from already-summarized conversation.
@@ -65,9 +59,7 @@ pub trait ConstraintExtractor {
     ) -> Result<Vec<ExtractedConstraint>, PipelineError>;
 }
 
-// ── CONV-007: Decision extraction ────────────────────────────────────
-
-/// CONV-007: Extract design decisions from a conversation extract
+/// Extract design decisions from a conversation extract
 /// or directly from messages.
 pub trait DecisionExtractor {
     /// Extract design decisions from already-summarized conversation.
@@ -77,9 +69,7 @@ pub trait DecisionExtractor {
     ) -> Result<Vec<ExtractedDesignDecision>, PipelineError>;
 }
 
-// ── CONV-008: Open-question extraction ───────────────────────────────
-
-/// CONV-008: Extract open questions from a conversation extract
+/// Extract open questions from a conversation extract
 /// or directly from messages.
 pub trait OpenQuestionExtractor {
     /// Extract open questions from already-summarized conversation.
@@ -88,8 +78,6 @@ pub trait OpenQuestionExtractor {
         extract: &ConversationExtract,
     ) -> Result<Vec<ExtractedOpenQuestion>, PipelineError>;
 }
-
-// ── CONV-009: Backlog draft generation ───────────────────────────────
 
 /// A single backlog item proposed from conversation analysis.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -117,7 +105,7 @@ pub struct BacklogDraft {
     pub generated_at: DateTime<Utc>,
 }
 
-/// CONV-009: Generate a draft backlog from a conversation extract.
+/// Generate a draft backlog from a conversation extract.
 ///
 /// The draft is not automatically committed to the roadmap; it must
 /// pass through roadmap absorption semantics (RMS pipeline) first.
@@ -128,8 +116,6 @@ pub trait BacklogDraftGenerator {
         extract: &ConversationExtract,
     ) -> Result<BacklogDraft, PipelineError>;
 }
-
-// ── CONV-010: Plan update from conversation extract ──────────────────
 
 /// A proposed update to an existing plan based on conversation.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -152,7 +138,7 @@ pub struct PlanUpdateProposal {
     pub proposed_at: DateTime<Utc>,
 }
 
-/// CONV-010: Propose plan updates from a conversation extract.
+/// Propose plan updates from a conversation extract.
 ///
 /// This does not directly mutate the plan; it produces a proposal
 /// that must be validated and applied through the plan gate logic.

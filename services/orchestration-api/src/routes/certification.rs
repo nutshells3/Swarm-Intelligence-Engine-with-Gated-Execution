@@ -13,8 +13,6 @@ use uuid::Uuid;
 use crate::error::{ApiResult, bad_request, internal_error, not_found};
 use crate::state::AppState;
 
-// ── GET /api/certification/config ───────────────────────────────────────
-
 /// Response for the current certification configuration.
 #[derive(Serialize, utoipa::ToSchema)]
 pub struct CertificationConfigResponse {
@@ -75,8 +73,6 @@ pub async fn get_certification_config(
         })),
     }
 }
-
-// ── PATCH /api/certification/config ─────────────────────────────────────
 
 /// Request body for updating certification configuration.
 #[derive(Deserialize, utoipa::ToSchema)]
@@ -198,8 +194,6 @@ pub async fn update_certification_config(
     }))
 }
 
-// ── POST /api/certification/submit ──────────────────────────────────────
-
 /// Request body for manually submitting a certification candidate.
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct SubmitCertificationRequest {
@@ -290,7 +284,6 @@ pub async fn submit_certification(
     .await
     .map_err(internal_error)?;
 
-    // Create the submission
     sqlx::query(
         r#"
         INSERT INTO certification_submissions
@@ -305,7 +298,6 @@ pub async fn submit_certification(
     .await
     .map_err(internal_error)?;
 
-    // Record the event
     sqlx::query(
         r#"
         INSERT INTO event_journal (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at)
@@ -338,10 +330,7 @@ pub async fn submit_certification(
     }))
 }
 
-// ── GET /api/certification/queue ────────────────────────────────────────
-
 /// A single entry in the certification queue.
-/// FCG-015: UI projection for certification state.
 #[derive(Serialize, utoipa::ToSchema)]
 pub struct CertificationQueueEntryResponse {
     pub submission_id: String,
@@ -363,7 +352,6 @@ pub struct CertificationQueueEntryResponse {
 }
 
 /// List pending and completed certification submissions.
-/// FCG-015: Returns useful data for the certification queue panel.
 #[utoipa::path(
     get,
     path = "/api/certification/queue",
@@ -421,8 +409,6 @@ pub async fn list_certification_queue(
 
     Ok(Json(results))
 }
-
-// ── GET /api/certification/results/{submission_id} ──────────────────────
 
 /// Full certification result for a given submission.
 #[derive(Serialize, utoipa::ToSchema)]

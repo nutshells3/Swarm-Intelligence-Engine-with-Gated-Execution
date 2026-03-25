@@ -70,7 +70,6 @@ pub use openai_api::OpenAiApiAdapter;
 pub use spawn::{
     SpawnBackend, SpawnConfig, SpawnError, SpawnHandle, SpawnResult,
     SubprocessSpawnBackend, IsolationHint,
-    // G2 SPN-004 through SPN-009 types
     CommandPrepManifest, StdinMode, PromptDeliveryMode, PermissionPolicy,
     SpawnBootstrapResult, ReadinessStatus, RuntimeBindingManifest,
     normalize_command, bootstrap_spawned_worker, check_readiness, prepare_runtime_env,

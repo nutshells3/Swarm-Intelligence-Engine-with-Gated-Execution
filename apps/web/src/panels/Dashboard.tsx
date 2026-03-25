@@ -39,8 +39,6 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 3_600_000)}h ago`;
 }
 
-// ---- Section: Cycle Progress ----
-
 function CycleProgress() {
   const { data: cycles } = useCycles();
   const active = cycles?.[0];
@@ -72,8 +70,6 @@ function CycleProgress() {
   );
 }
 
-// ---- Section: Agent Status ----
-
 function AgentStatus() {
   const { data: saturation } = useSaturationMetrics();
   const { data: meta } = useMeta();
@@ -101,8 +97,6 @@ function AgentStatus() {
     </div>
   );
 }
-
-// ---- Section: Task Summary ----
 
 function TaskSummary() {
   const { data: metrics } = useTaskMetrics();
@@ -149,8 +143,6 @@ function TaskSummary() {
   );
 }
 
-// ---- Section: Gate Status ----
-
 function GateStatus() {
   const { data: metrics } = useTaskMetrics();
   const succeeded = metrics?.succeeded ?? 0;
@@ -168,8 +160,6 @@ function GateStatus() {
     </div>
   );
 }
-
-// ---- Section: Event Feed ----
 
 function EventFeed() {
   const { data: events } = useEvents();
@@ -213,8 +203,6 @@ function describeEvent(ev: EventResponse): string {
   return '';
 }
 
-// ---- Section: Metrics ----
-
 function MetricsSummary() {
   const { data: certQueue } = useCertificationQueue();
   const { data: saturation } = useSaturationMetrics();
@@ -246,8 +234,6 @@ function MetricsSummary() {
     </div>
   );
 }
-
-// ---- Main Dashboard ----
 
 export default function Dashboard() {
   return (

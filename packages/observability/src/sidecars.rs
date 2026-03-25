@@ -1,4 +1,4 @@
-//! Sidecar observability types (OBS-007 through OBS-009).
+//! Sidecar observability types.
 //!
 //! Sidecars are lightweight status records that ride alongside the
 //! primary event stream. They are not authoritative state transitions
@@ -6,11 +6,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
-// ── OBS-007: Phase-status sidecars ──────────────────────────────────────
-//
-// CSV guardrail: "Define durable metrics for cycle phase status."
-// Acceptance: schema validation; metrics replay check.
 
 /// Current status of a cycle phase, emitted as a sidecar record each
 /// time the phase changes or at a regular heartbeat interval.
@@ -45,11 +40,6 @@ pub struct PhaseStatusSidecar {
     pub recorded_at: DateTime<Utc>,
 }
 
-// ── OBS-008: Session heartbeat logs ─────────────────────────────────────
-//
-// CSV guardrail: "Define durable metrics for session liveness."
-// Acceptance: schema validation; metrics replay check.
-
 /// A heartbeat record emitted by a session (orchestration loop instance)
 /// at regular intervals. Used for liveness detection and session-level
 /// diagnostics.
@@ -75,11 +65,6 @@ pub struct SessionHeartbeatLog {
     pub cadence_seconds: u32,
     pub recorded_at: DateTime<Utc>,
 }
-
-// ── OBS-009: Retryable failure metrics ──────────────────────────────────
-//
-// CSV guardrail: "Define durable metrics for retryable failures."
-// Acceptance: schema validation; metrics replay check.
 
 /// Classification of a retryable failure, used to distinguish transient
 /// provider errors from systematic output problems.

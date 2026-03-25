@@ -1,12 +1,12 @@
-//! Git and worktree control (GIT-001 through GIT-010).
+//! Git and worktree control.
 //!
 //! Goal: Govern code isolation so workers do not stomp each other.
 //! Caution: Do not merge conflicting edits automatically.
 //!
 //! This crate provides typed schemas and traits for:
-//! - Repository targeting and branch ownership (GIT-001 to GIT-004)
-//! - Worker-to-worktree binding and detection traits (GIT-005 to GIT-008)
-//! - Review-before-merge and cleanup rules (GIT-009, GIT-010)
+//! - Repository targeting and branch ownership
+//! - Worker-to-worktree binding and detection traits
+//! - Review-before-merge and cleanup rules
 //!
 //! All types are serializable for persistence and audit.
 
@@ -21,11 +21,7 @@ pub use worktree::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── GIT-001: Repo target schema ───────────────────────────────────────────
-//
-// Identifies the repository and ref a worker operates against.
-
-/// GIT-001 -- Repository target.
+/// Repository target.
 ///
 /// Every worker operation is scoped to a specific repo + ref.
 /// The control plane uses this to enforce isolation.
@@ -41,10 +37,6 @@ pub struct RepoTarget {
     pub repo_id: String,
 }
 
-// ── GIT-002: Branch ownership rules ───────────────────────────────────────
-//
-// Defines which workers are allowed to operate on which branches.
-
 /// Ownership scope for a branch rule.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -57,7 +49,7 @@ pub enum BranchOwnershipScope {
     Open,
 }
 
-/// GIT-002 -- Branch ownership rule.
+/// Branch ownership rule.
 ///
 /// Controls which workers can operate on a branch pattern.
 /// Patterns use glob syntax (e.g. "worker/*", "feature/impl-*").
@@ -77,11 +69,7 @@ pub struct BranchOwnershipRule {
     pub active: bool,
 }
 
-// ── GIT-003: Worktree assignment rules ────────────────────────────────────
-//
-// Maps workers to isolated git worktrees.
-
-/// GIT-003 -- Worktree assignment.
+/// Worktree assignment.
 ///
 /// Each worker gets its own worktree to prevent file contention.
 /// The control plane tracks which worktrees are in use.
@@ -105,11 +93,7 @@ pub struct WorktreeAssignment {
     pub active: bool,
 }
 
-// ── GIT-004: File ownership hints ─────────────────────────────────────────
-//
-// Advisory hints about which files "belong" to which work items.
-
-/// GIT-004 -- File ownership hint.
+/// File ownership hint.
 ///
 /// Advisory (not enforced) hints about file ownership. The conflict
 /// detector (GIT-008) uses these to flag likely conflicts before
@@ -126,11 +110,7 @@ pub struct FileOwnershipHint {
     pub rationale: String,
 }
 
-// ── GIT-005: Worker-to-worktree binding ───────────────────────────────────
-//
-// Trait for binding and unbinding workers to worktrees.
-
-/// GIT-005 -- Worker-to-worktree binding trait.
+/// Worker-to-worktree binding trait.
 ///
 /// Implementors manage the lifecycle of worktree assignments:
 /// creating worktrees, assigning workers, and releasing on completion.
@@ -178,11 +158,7 @@ pub enum WorktreeErrorKind {
     DirtyWorktree,
 }
 
-// ── GIT-006: Dirty worktree detection ─────────────────────────────────────
-//
-// Detects worktrees with uncommitted changes.
-
-/// GIT-006 -- Dirty worktree detection result.
+/// Dirty worktree detection result.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DirtyWorktreeReport {
     /// Worktree path.
@@ -197,7 +173,7 @@ pub struct DirtyWorktreeReport {
     pub has_staged_changes: bool,
 }
 
-/// GIT-006 -- Dirty worktree detector trait.
+/// Dirty worktree detector trait.
 ///
 /// Implementors check worktrees for uncommitted changes and report
 /// them for operator attention.
@@ -209,11 +185,7 @@ pub trait DirtyWorktreeDetector {
     fn check_all_active(&self) -> Vec<DirtyWorktreeReport>;
 }
 
-// ── GIT-007: Merge candidate detection ────────────────────────────────────
-//
-// Identifies branches ready to merge into the base branch.
-
-/// GIT-007 -- Merge candidate.
+/// Merge candidate.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MergeCandidate {
     /// Branch name.
@@ -234,7 +206,7 @@ pub struct MergeCandidate {
     pub certification_passed: bool,
 }
 
-/// GIT-007 -- Merge candidate detector trait.
+/// Merge candidate detector trait.
 ///
 /// Implementors scan branches and identify those eligible for merge.
 pub trait MergeCandidateDetector {
@@ -242,12 +214,7 @@ pub trait MergeCandidateDetector {
     fn detect_candidates(&self, repo_target: &RepoTarget) -> Vec<MergeCandidate>;
 }
 
-// ── GIT-008: Conflicting edit detection ───────────────────────────────────
-//
-// Detects when multiple workers have edited the same files.
-// Caution: Do not merge conflicting edits automatically.
-
-/// GIT-008 -- Conflicting edit report.
+/// Conflicting edit report.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConflictingEditReport {
     /// File path with conflicting edits.
@@ -274,7 +241,7 @@ pub enum ConflictKind {
     Semantic,
 }
 
-/// GIT-008 -- Conflicting edit detector trait.
+/// Conflicting edit detector trait.
 ///
 /// Implementors scan active branches for overlapping edits.
 /// The control plane must never auto-merge conflicting edits.
@@ -283,11 +250,7 @@ pub trait ConflictingEditDetector {
     fn detect_conflicts(&self, repo_target: &RepoTarget) -> Vec<ConflictingEditReport>;
 }
 
-// ── GIT-009: Review-before-merge rule ─────────────────────────────────────
-//
-// Ensures that branches are not merged without review.
-
-/// GIT-009 -- Review-before-merge rule.
+/// Review-before-merge rule.
 ///
 /// Defines the conditions that must be met before a branch can
 /// be merged. The control plane blocks merge operations until
@@ -312,11 +275,7 @@ pub struct ReviewBeforeMergeRule {
     pub active: bool,
 }
 
-// ── GIT-010: Safe cleanup rules ───────────────────────────────────────────
-//
-// Governs when and how merged branches and worktrees are cleaned up.
-
-/// GIT-010 -- Safe cleanup rules.
+/// Safe cleanup rules.
 ///
 /// Controls the lifecycle of branches and worktrees after merge
 /// or abandonment. The control plane uses these rules to safely

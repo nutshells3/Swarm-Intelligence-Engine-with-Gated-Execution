@@ -32,7 +32,7 @@ pub async fn create_cycle(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let cycle_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'cycle' and idempotency_key = $1 limit 1",
     )

@@ -339,7 +339,6 @@ async fn insert_planning_artifacts(
     plan_id: &str,
     artifacts: &PlanningArtifacts,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // ── 1. Update architecture_summary on the plan ──────────────────────
     sqlx::query(
         "UPDATE plans SET architecture_summary = $1, updated_at = now() WHERE plan_id = $2",
     )
@@ -348,7 +347,6 @@ async fn insert_planning_artifacts(
     .execute(&mut **tx)
     .await?;
 
-    // ── 2. Create milestone_tree + milestone_nodes ──────────────────────
     let tree_id = Uuid::now_v7().to_string();
     sqlx::query(
         "INSERT INTO milestone_trees (tree_id, objective_id, draft_id, created_at, updated_at) \
@@ -387,7 +385,6 @@ async fn insert_planning_artifacts(
         milestone_ids.push(milestone_id);
     }
 
-    // ── 3. Insert acceptance criteria ───────────────────────────────────
     // Attach criteria to the first milestone when available, otherwise to
     // the objective itself.
     let default_owner = milestone_ids
@@ -425,7 +422,6 @@ async fn insert_planning_artifacts(
         .await?;
     }
 
-    // ── 4. Insert risk register entries ─────────────────────────────────
     for risk in &artifacts.risks {
         let risk_id = Uuid::now_v7().to_string();
         // Validate enum values.
@@ -453,7 +449,6 @@ async fn insert_planning_artifacts(
         .await?;
     }
 
-    // ── 5. Insert plan invariants ───────────────────────────────────────
     for inv in &artifacts.invariants {
         let invariant_id = Uuid::now_v7().to_string();
         let predicate = if inv.predicate.is_empty() {
@@ -475,7 +470,6 @@ async fn insert_planning_artifacts(
         .await?;
     }
 
-    // ── 6. Emit provenance event ────────────────────────────────────────
     sqlx::query(
         "INSERT INTO event_journal \
          (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at) \
@@ -623,7 +617,7 @@ pub async fn elaborate_plan(
         }
     };
 
-    // ── 4b. Generate planning artifacts if missing ──────────────────────
+    // Generate planning artifacts if missing.
     //
     // Check whether the key artifacts already exist.  If not, call the
     // agent adapter to produce them (or fall back to deterministic
@@ -787,8 +781,7 @@ pub async fn elaborate_plan(
     .await
     .unwrap_or(0);
 
-    // ── PLAN-018: Build full condition entries and CompletenessScore ───
-    //
+    // Build full condition entries and CompletenessScore.
     // Construct a PlanGateDefinition from the evaluated booleans so we
     // can feed it to the planning-engine's score_plan_completeness() and
     // validate_plan() -- the authoritative, deterministic functions.
@@ -826,7 +819,6 @@ pub async fn elaborate_plan(
     // Compute the full CompletenessScore via the authoritative function.
     let completeness = score_plan_completeness(&gate_def);
 
-    // ── PLAN-019: Collect structured validation failure reasons ────────
     let failures = validate_plan(&gate_def);
 
     // Determine gate satisfaction: score >= 0.6, OR existing nodes,

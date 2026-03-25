@@ -10,8 +10,6 @@ use uuid::Uuid;
 use crate::error::{ApiResult, bad_request, internal_error};
 use crate::state::AppState;
 
-// ── Request / response types ─────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct SendPeerMessageRequest {
     pub from_task_id: String,
@@ -84,8 +82,6 @@ pub struct TopicSummary {
 pub struct PeerStreamQuery {
     pub topic: String,
 }
-
-// ── POST /api/peer/messages -- send a peer message ────────────────────────
 
 #[utoipa::path(
     post,
@@ -164,8 +160,6 @@ pub async fn send_peer_message(
         created_at: created_at.to_rfc3339(),
     }))
 }
-
-// ── GET /api/peer/messages?topic={topic}&since={timestamp} ───────────────
 
 #[utoipa::path(
     get,
@@ -246,8 +240,6 @@ pub async fn list_peer_messages(
     Ok(Json(results))
 }
 
-// ── POST /api/peer/messages/{message_id}/ack — acknowledge receipt ───────
-
 #[utoipa::path(
     post,
     path = "/api/peer/messages/{message_id}/ack",
@@ -312,8 +304,6 @@ pub async fn ack_peer_message(
     }))
 }
 
-// ── POST /api/peer/subscribe — subscribe to a topic ──────────────────────
-
 #[utoipa::path(
     post,
     path = "/api/peer/subscribe",
@@ -355,8 +345,6 @@ pub async fn subscribe(
     }))
 }
 
-// ── DELETE /api/peer/subscribe — unsubscribe from a topic ────────────────
-
 #[utoipa::path(
     delete,
     path = "/api/peer/subscribe",
@@ -379,8 +367,6 @@ pub async fn unsubscribe(
 
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
-
-// ── GET /api/peer/topics — list active topics with message counts ────────
 
 #[utoipa::path(
     get,
@@ -416,8 +402,6 @@ pub async fn list_topics(
 
     Ok(Json(results))
 }
-
-// ── GET /api/peer/stream?topic={topic} — SSE stream for peer messages ────
 
 pub async fn peer_stream(
     State(state): State<AppState>,

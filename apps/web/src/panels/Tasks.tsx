@@ -83,7 +83,6 @@ export default function Tasks() {
 
       {board && (
         <>
-          {/* Summary bar */}
           <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 13, color: '#6b7280' }}>Queued: {board.summary.queued}</span>
             <span style={{ fontSize: 13, color: '#3b82f6' }}>Running: {board.summary.running}</span>

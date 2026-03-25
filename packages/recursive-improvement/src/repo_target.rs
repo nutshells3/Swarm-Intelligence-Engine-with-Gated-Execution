@@ -13,8 +13,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── REC-002: Allow/deny rule ─────────────────────────────────────────────
-
 /// Whether a repo path is allowed or denied for self-modification.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -50,7 +48,7 @@ pub enum WorktreeIsolationRequirement {
     NotRequired,
 }
 
-/// REC-002 -- Repo target policy.
+/// Repo target policy.
 ///
 /// Governs which repository paths a self-improvement task may modify.
 /// Combines allowlist/denylist rules with per-task target binding and

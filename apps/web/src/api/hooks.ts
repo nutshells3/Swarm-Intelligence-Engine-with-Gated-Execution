@@ -208,7 +208,7 @@ export function useConflicts() {
   });
 }
 
-// ---- Reviews (IDE-011 / IDE-012 / IDE-013) ----
+// ---- Reviews ----
 
 export function useReviews() {
   return useQuery<ReviewResponse[]>({
@@ -227,7 +227,6 @@ export function useApproveReview() {
   });
 }
 
-// REV-019: Human digest summary
 export function useReviewDigest() {
   return useMutation<ReviewDigestResponse, Error, { objectiveId: string }>({
     mutationFn: ({ objectiveId }) =>
@@ -235,7 +234,7 @@ export function useReviewDigest() {
   });
 }
 
-// ---- Skills (IDE-009) ----
+// ---- Skills ----
 
 export function useSkillPacks() {
   return useQuery<SkillPackResponse[]>({
@@ -253,7 +252,7 @@ export function useWorkerTemplates() {
   });
 }
 
-// ---- Settings (IDE-008) ----
+// ---- Settings ----
 
 export function usePolicy(id: string) {
   return useQuery<PolicySnapshotResponse>({

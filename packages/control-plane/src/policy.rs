@@ -11,12 +11,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── POL-001: Policy version tracking ─────────────────────────────────────
-//
-// Every policy change creates a new version. The control plane never
-// silently mutates live policy.
-
-/// POL-001 -- Policy version metadata.
+/// Policy version metadata.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyVersion {
     /// Monotonically increasing version number.
@@ -31,12 +26,7 @@ pub struct PolicyVersion {
     pub content_hash: String,
 }
 
-// ── POL-002: Per-cycle policy snapshot ────────────────────────────────────
-//
-// Each execution cycle captures a frozen snapshot of the active policy.
-// This ensures reproducibility and audit trail.
-
-/// POL-002 -- Per-cycle policy snapshot reference.
+/// Per-cycle policy snapshot reference.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyCycleSnapshot {
     /// Unique snapshot identifier.
@@ -51,12 +41,7 @@ pub struct PolicyCycleSnapshot {
     pub snapshotted_at: DateTime<Utc>,
 }
 
-// ── POL-003: Worker dispatch policy ──────────────────────────────────────
-//
-// Controls how tasks are dispatched to workers, including concurrency
-// limits and routing preferences.
-
-/// POL-003 -- Worker dispatch policy.
+/// Worker dispatch policy.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WorkerDispatchPolicy {
     /// Maximum concurrent workers across all tasks.
@@ -86,11 +71,7 @@ impl Default for WorkerDispatchPolicy {
     }
 }
 
-// ── POL-004: Adapter selection policy ────────────────────────────────────
-//
-// Controls which adapter is selected for a given task kind and role.
-
-/// POL-004 -- Adapter selection preference.
+/// Adapter selection preference.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum AdapterPreference {
@@ -106,7 +87,7 @@ pub enum AdapterPreference {
     LatencyOptimized,
 }
 
-/// POL-004 -- Adapter selection policy per task kind.
+/// Adapter selection policy per task kind.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AdapterSelectionPolicy {
     /// Task kind this policy applies to.
@@ -119,12 +100,7 @@ pub struct AdapterSelectionPolicy {
     pub preferred_model: Option<String>,
 }
 
-// ── POL-005: Token budget policy ─────────────────────────────────────────
-//
-// Per-role token budgets. The control plane enforces these before
-// dispatching context to workers.
-
-/// POL-005 -- Token budget policy per worker role.
+/// Token budget policy per worker role.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TokenBudgetPolicy {
     /// Worker role this budget applies to.
@@ -139,11 +115,7 @@ pub struct TokenBudgetPolicy {
     pub allow_overflow_with_warning: bool,
 }
 
-// ── POL-006: Timeout policy ──────────────────────────────────────────────
-//
-// Per-task-kind timeout policies with escalation rules.
-
-/// POL-006 -- Timeout policy per task kind.
+/// Timeout policy per task kind.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TimeoutPolicy {
     /// Task kind this policy applies to.
@@ -170,11 +142,7 @@ pub enum TimeoutAction {
     Escalate,
 }
 
-// ── POL-007: Retry policy ────────────────────────────────────────────────
-//
-// Per-task-kind retry policies.
-
-/// POL-007 -- Retry policy per task kind.
+/// Retry policy per task kind.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RetryPolicy {
     /// Task kind this policy applies to.
@@ -205,11 +173,7 @@ pub enum RetryBackoff {
     Linear,
 }
 
-// ── POL-008: Concurrency policy ──────────────────────────────────────────
-//
-// Global and per-role concurrency limits.
-
-/// POL-008 -- Concurrency policy.
+/// Concurrency policy.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConcurrencyPolicy {
     /// Global maximum concurrent workers.
@@ -225,11 +189,7 @@ pub struct RoleConcurrencyLimit {
     pub max_concurrent: u32,
 }
 
-// ── POL-009: Caution policy ──────────────────────────────────────────────
-//
-// Per-task-kind cautions that workers must respect.
-
-/// POL-009 -- Caution policy per task kind.
+/// Caution policy per task kind.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CautionPolicy {
     /// Task kind this policy applies to.
@@ -249,11 +209,7 @@ pub struct CautionEntry {
     pub blocking: bool,
 }
 
-// ── POL-010: Output format policy ────────────────────────────────────────
-//
-// Controls expected output format per task kind.
-
-/// POL-010 -- Output format policy per task kind.
+/// Output format policy per task kind.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OutputFormatPolicy {
     /// Task kind this policy applies to.
@@ -282,12 +238,7 @@ pub enum OutputFormat {
     Mixed,
 }
 
-// ── POL-011: Policy override ─────────────────────────────────────────────
-//
-// Per-task policy overrides that take precedence over the global policy.
-// Overrides must have explicit justification and are auditable.
-
-/// POL-011 -- Per-task policy override.
+/// Per-task policy override.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyOverride {
     /// Unique override identifier.
@@ -320,11 +271,7 @@ pub enum PolicyField {
     OutputFormat,
 }
 
-// ── POL-012: Policy validation ───────────────────────────────────────────
-//
-// Validates policy consistency and completeness.
-
-/// POL-012 -- Policy validation result.
+/// Policy validation result.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyValidationResult {
     /// Whether the policy is valid.
@@ -344,11 +291,7 @@ pub struct PolicyValidationError {
     pub message: String,
 }
 
-// ── POL-013: Policy diff ─────────────────────────────────────────────────
-//
-// Computes the difference between two policy versions.
-
-/// POL-013 -- A single field change between policy versions.
+/// A single field change between policy versions.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyDiffEntry {
     /// Path to the changed field.
@@ -359,7 +302,7 @@ pub struct PolicyDiffEntry {
     pub new_value: serde_json::Value,
 }
 
-/// POL-013 -- Full diff between two policy versions.
+/// Full diff between two policy versions.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyDiff {
     /// Source version.
@@ -370,11 +313,7 @@ pub struct PolicyDiff {
     pub changes: Vec<PolicyDiffEntry>,
 }
 
-// ── POL-014: Policy event ────────────────────────────────────────────────
-//
-// Audit trail for policy changes.
-
-/// POL-014 -- Policy change event kind.
+/// Policy change event kind.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum PolicyEventKind {
@@ -390,7 +329,7 @@ pub enum PolicyEventKind {
     ValidationPerformed,
 }
 
-/// POL-014 -- Policy change event.
+/// Policy change event.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyEvent {
     /// Unique event identifier.
@@ -409,11 +348,7 @@ pub struct PolicyEvent {
     pub created_at: DateTime<Utc>,
 }
 
-// ── POL-015: Aggregate execution policy ──────────────────────────────────
-//
-// Top-level policy snapshot aggregating all POL sub-policies.
-
-/// POL-015 -- Aggregate execution policy for the control plane.
+/// Aggregate execution policy for the control plane.
 ///
 /// This is the single source of truth for all execution policy.
 /// It is versioned, serializable, and snapshotted per cycle.

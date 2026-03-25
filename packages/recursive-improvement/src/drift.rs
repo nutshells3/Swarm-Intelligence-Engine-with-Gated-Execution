@@ -12,8 +12,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── REC-007: Drift kinds ─────────────────────────────────────────────────
-
 /// The kind of drift detected.  CSV requires detection across four
 /// domains: policy, schema, skill resolution, and approval law.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -77,7 +75,7 @@ pub struct ApprovalDrift {
     pub weakens_governance: bool,
 }
 
-/// REC-007 -- Drift check artifact.
+/// Drift check artifact.
 ///
 /// A durable record of a drift check run across all four domains.
 /// Detects semantic drift, not just file-level diffs (CSV constraint).

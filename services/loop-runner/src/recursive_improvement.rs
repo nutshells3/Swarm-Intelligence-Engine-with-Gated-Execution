@@ -1,4 +1,4 @@
-//! Runtime logic for REC-004 through REC-010.
+//! Runtime logic for recursive improvement (comparison, scoring, drift, reports, memory).
 //!
 //! Connects the type definitions in `recursive-improvement` crate to the
 //! loop-runner tick lifecycle. Each function writes to the authoritative
@@ -9,8 +9,6 @@
 
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-
-// ── REC-004: Comparison summaries ────────────────────────────────────────
 
 /// Generate a comparison artifact after a cycle completes.
 ///
@@ -202,8 +200,6 @@ pub async fn generate_comparison_artifact(
 
     Ok(1)
 }
-
-// ── REC-005: Loop-to-loop improvement scoring ────────────────────────────
 
 /// Compute an improvement score after a comparison artifact is generated.
 ///
@@ -407,8 +403,6 @@ pub async fn compute_improvement_score(
     Ok(1)
 }
 
-// ── REC-006: Self-improvement milestone templates ────────────────────────
-
 /// Generate milestone templates for self-improvement objectives.
 ///
 /// When an objective summary contains "self-improvement" or "improve",
@@ -554,8 +548,6 @@ pub async fn generate_milestone_templates(
 
     Ok(created)
 }
-
-// ── REC-007: Drift checks for self-improvement ──────────────────────────
 
 /// When a self-improvement objective modifies core files (state-model,
 /// control-plane), INSERT a drift_check_artifact recording what was
@@ -722,8 +714,6 @@ pub async fn check_self_improvement_drift(
     Ok(1)
 }
 
-// ── REC-008: Forbid unsafeguarded self-promotion ────────────────────────
-
 /// Check whether a certification submission's objective is a
 /// self-improvement type. If so, require dual formalization before
 /// allowing promotion.
@@ -822,8 +812,6 @@ pub async fn get_self_improvement_objective_id(
 
     Ok(si_match)
 }
-
-// ── REC-009: Report generation ──────────────────────────────────────────
 
 /// Generate a recursive_report after a self-improvement loop iteration
 /// completes.
@@ -1043,8 +1031,6 @@ pub async fn generate_recursive_report(
     Ok(1)
 }
 
-// ── REC-010: Recursive roadmap memory (extended) ────────────────────────
-
 /// Extend existing recursive_memory_entries write.
 ///
 /// In addition to failure patterns (already written in tick.rs state_update),
@@ -1060,7 +1046,6 @@ pub async fn write_extended_memory(
 ) -> Result<u32, Box<dyn std::error::Error>> {
     let mut created = 0u32;
 
-    // ── Success patterns ──────────────────────────────────────────────
     let successes = sqlx::query(
         "SELECT t.task_id, n.title, n.lane
          FROM tasks t
@@ -1146,7 +1131,6 @@ pub async fn write_extended_memory(
         }
     }
 
-    // ── Roadmap suggestions ────────────────────────────────────────────
     // Derive suggestions from failure patterns and scores
     let failure_count: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM tasks t
@@ -1246,8 +1230,6 @@ pub async fn write_extended_memory(
 
     Ok(created)
 }
-
-// ── REC-010 (extended): Cross-cycle learning reinjection ────────────────
 
 /// Retrieve lessons from completed cycles that have not yet been consumed
 /// by the current cycle.  This closes the cross-cycle boundary gap:

@@ -23,7 +23,6 @@ export default function ObjectiveChat() {
     <div className="panel">
       <h2>Objectives</h2>
 
-      {/* Create form */}
       <form className="create-form" onSubmit={handleCreate}>
         <input
           type="text"
@@ -36,7 +35,6 @@ export default function ObjectiveChat() {
         </button>
       </form>
 
-      {/* Objectives list */}
       {isLoading && <p className="text-muted">Loading objectives...</p>}
       <div className="objective-list">
         {(objectives ?? []).map((obj) => (
@@ -54,13 +52,11 @@ export default function ObjectiveChat() {
         ))}
       </div>
 
-      {/* Chat placeholder */}
       <div className="chat-placeholder">
         <h3>Chat</h3>
         <p className="text-muted">Chat messages will appear here once wired to the backend.</p>
       </div>
 
-      {/* Extracted items placeholder */}
       <div className="extracted-placeholder">
         <div className="extracted-card">
           <h4>Constraints</h4>

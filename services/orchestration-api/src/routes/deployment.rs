@@ -1,8 +1,8 @@
-//! DEP-012: Deployment config API routes.
+//! Deployment config API routes.
 //!
-//! GET  /api/deployment/config — reads deployment_policies table, returns
+//! GET  /api/deployment/config -- reads deployment_policies table, returns
 //!     current mode + endpoints.
-//! PATCH /api/deployment/config — updates deployment mode by inserting a
+//! PATCH /api/deployment/config -- updates deployment mode by inserting a
 //!     new revision (immutable audit trail).
 
 use axum::extract::State;
@@ -12,8 +12,6 @@ use sqlx::Row;
 
 use crate::error::{ApiResult, bad_request, internal_error};
 use crate::state::AppState;
-
-// ── Response / Request types ──────────────────────────────────────────
 
 /// Response for GET /api/deployment/config.
 #[derive(Serialize, utoipa::ToSchema)]
@@ -55,11 +53,9 @@ const VALID_DEPLOYMENT_MODES: &[&str] = &[
     "certification_disabled",
 ];
 
-// ── Handlers ──────────────────────────────────────────────────────────
-
 /// GET /api/deployment/config
 ///
-/// DEP-012: Returns the current deployment policy (highest revision for
+/// Returns the current deployment policy (highest revision for
 /// scope='global') and all configured remote endpoints.
 #[utoipa::path(
     get,
@@ -161,7 +157,7 @@ pub async fn get_deployment_config(
 
 /// PATCH /api/deployment/config
 ///
-/// DEP-012: Updates the deployment mode by inserting a new revision.
+/// Updates the deployment mode by inserting a new revision.
 /// The previous revision remains for audit. Only `deployment_mode` is
 /// mutable via this endpoint; other policy fields carry forward.
 #[utoipa::path(

@@ -11,8 +11,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── REC-009: Report sections ─────────────────────────────────────────────
-
 /// A section within a recursive improvement report.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ReportSection {
@@ -37,7 +35,7 @@ pub struct NextRecommendation {
     pub prerequisites: Vec<String>,
 }
 
-/// REC-009 -- Recursive improvement report.
+/// Recursive improvement report.
 ///
 /// A durable, self-contained report for a self-improvement loop
 /// iteration.  Covers all CSV-required sections: objective, repo

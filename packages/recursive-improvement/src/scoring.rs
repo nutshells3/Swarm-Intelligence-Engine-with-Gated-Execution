@@ -12,8 +12,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── REC-005: Scoring inputs and breakdown ────────────────────────────────
-
 /// Inputs to the scoring function.  Gathered from loop telemetry.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ScoringInput {
@@ -49,7 +47,7 @@ pub struct ScoreBreakdown {
     pub regression_risk: f64,
 }
 
-/// REC-005 -- Loop score.
+/// Loop score.
 ///
 /// Advisory-only score for a self-improvement loop iteration.  Scores
 /// inform human reviewers and governance but never autonomously approve

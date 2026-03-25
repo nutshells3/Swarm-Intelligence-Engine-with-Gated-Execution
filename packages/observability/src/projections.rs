@@ -1,4 +1,4 @@
-//! UI metrics projection types (OBS-010).
+//! UI metrics projection types.
 //!
 //! Projection types are **not** authoritative metrics. They are
 //! derived, estimated, or aggregated summaries intended only for UI
@@ -12,11 +12,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::metrics::PressureLevel;
-
-// ── OBS-010: UI metrics projection types ────────────────────────────────
-//
-// CSV guardrail: "Define projection types for UI display."
-// Acceptance: projection fixture check; schema validation.
 
 /// Projected (estimated) cost summary for dashboard display.
 /// All figures here are best-effort aggregations and may lag behind

@@ -7,8 +7,6 @@ use uuid::Uuid;
 use crate::error::{ApiResult, bad_request, internal_error, not_found};
 use crate::state::AppState;
 
-// ── Roadmap Nodes ───────────────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateRoadmapNodeRequest {
     pub objective_id: String,
@@ -43,7 +41,7 @@ pub async fn create_roadmap_node(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let roadmap_node_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'roadmap_node' and idempotency_key = $1 limit 1",
     )
@@ -202,8 +200,6 @@ pub async fn list_roadmap_nodes(
     Ok(Json(results))
 }
 
-// ── Roadmap Absorptions ─────────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct CreateAbsorptionRequest {
     pub roadmap_node_id: String,
@@ -241,7 +237,7 @@ pub async fn create_absorption(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let absorption_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'roadmap_absorption' and idempotency_key = $1 limit 1",
     )
@@ -360,8 +356,6 @@ pub async fn list_absorptions(
 
     Ok(Json(results))
 }
-
-// ── Roadmap Absorb (full pipeline) ──────────────────────────────────────
 
 const VALID_ACTION_KINDS: &[&str] = &[
     "create_node",
@@ -563,7 +557,6 @@ pub async fn absorb_roadmap(
     .await
     .map_err(internal_error)?;
 
-    // RMS-005: Emit action-specific event kind for defer/reject
     let event_kind = match req.action_kind.as_str() {
         "defer_node" => "roadmap_node_deferred",
         "reject_node" => "roadmap_node_rejected",
@@ -602,8 +595,6 @@ pub async fn absorb_roadmap(
         created_at: chrono::Utc::now().to_rfc3339(),
     }))
 }
-
-// ── Roadmap Reorder ─────────────────────────────────────────────────────
 
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct ReorderRoadmapRequest {
@@ -695,8 +686,6 @@ pub async fn reorder_roadmap(
     }))
 }
 
-// ── Roadmap Track Change ────────────────────────────────────────────────
-
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct ChangeTrackRequest {
     pub track: String,
@@ -714,7 +703,7 @@ pub struct ChangeTrackResponse {
 
 /// PATCH /api/roadmap/nodes/{id}/track
 ///
-/// RMS-004 / RMS-009: Updates roadmap_nodes.track, emits both
+/// Updates roadmap_nodes.track, emits both
 /// `roadmap_track_changed` and `roadmap_reprioritized` events,
 /// and returns the full updated node.
 #[utoipa::path(
@@ -781,7 +770,6 @@ pub async fn change_track(
     .await
     .map_err(internal_error)?;
 
-    // RMS-009: Also emit roadmap_reprioritized event
     sqlx::query(
         r#"INSERT INTO event_journal (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at)
            VALUES ($1, 'roadmap_node', $2, 'roadmap_reprioritized', $3, $4::jsonb, now())
@@ -811,8 +799,6 @@ pub async fn change_track(
         updated: true,
     }))
 }
-
-// ── RMS-010: Roadmap projection endpoint ─────────────────────────────
 
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct RoadmapProjectionQuery {
@@ -856,7 +842,7 @@ pub struct RoadmapProjectionResponse {
 
 /// GET /api/projections/roadmap
 ///
-/// RMS-010: Returns roadmap nodes with ordering and status.
+/// Returns roadmap nodes with ordering and status.
 /// Nodes are returned sorted by their ordering position within each
 /// objective, falling back to creation time for unordered nodes.
 #[utoipa::path(
@@ -970,7 +956,7 @@ pub async fn roadmap_projection(
 
     let total_count = result_nodes.len() as i64;
 
-    // RMS-010: Build track-grouped view
+    // Build track-grouped view
     let mut track_map = std::collections::BTreeMap::<String, Vec<RoadmapProjectionNode>>::new();
     for node in &result_nodes {
         track_map

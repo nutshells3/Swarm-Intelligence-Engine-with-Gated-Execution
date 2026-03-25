@@ -1,4 +1,4 @@
-//! Read-model projections (RDM-001 through RDM-010).
+//! Read-model projections.
 //!
 //! CSV guardrail: "projection update check"
 //! Goal: Expose orchestration state as queryable projections for UI
@@ -14,10 +14,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use state_model::{CyclePhase, NodeLane, NodeLifecycle, TaskStatus};
 
-// ── RDM-001: Task board projection ────────────────────────────────────────
-//
-// Flat list of tasks for the task board UI panel.
-
 /// A single item on the task board.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskBoardItem {
@@ -32,7 +28,7 @@ pub struct TaskBoardItem {
     pub updated_at: DateTime<Utc>,
 }
 
-/// RDM-001 -- Task board projection.
+/// Task board projection.
 ///
 /// Aggregates all tasks into a board view with status counts.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -47,10 +43,6 @@ pub struct TaskBoardProjection {
     /// Timestamp when this projection was last computed.
     pub computed_at: DateTime<Utc>,
 }
-
-// ── RDM-002: Node graph projection ────────────────────────────────────────
-//
-// Graph of execution nodes with edges for dependencies.
 
 /// A single node in the graph projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -72,17 +64,13 @@ pub struct NodeGraphEdge {
     pub edge_kind: String,
 }
 
-/// RDM-002 -- Node graph projection.
+/// Node graph projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NodeGraphProjection {
     pub nodes: Vec<NodeGraphItem>,
     pub edges: Vec<NodeGraphEdge>,
     pub computed_at: DateTime<Utc>,
 }
-
-// ── RDM-003: Branch/mainline projection ───────────────────────────────────
-//
-// Shows nodes grouped by lane for the branch/mainline panel.
 
 /// A node in the branch/mainline view.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -97,7 +85,7 @@ pub struct BranchMainlineItem {
     pub review_status: Option<String>,
 }
 
-/// RDM-003 -- Branch/mainline projection.
+/// Branch/mainline projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BranchMainlineProjection {
     pub branch_nodes: Vec<BranchMainlineItem>,
@@ -106,10 +94,6 @@ pub struct BranchMainlineProjection {
     pub blocked_nodes: Vec<BranchMainlineItem>,
     pub computed_at: DateTime<Utc>,
 }
-
-// ── RDM-004: Review queue projection ──────────────────────────────────────
-//
-// Lists items awaiting review.
 
 /// A single item in the review queue.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -122,7 +106,7 @@ pub struct ReviewQueueItem {
     pub submitted_at: DateTime<Utc>,
 }
 
-/// RDM-004 -- Review queue projection.
+/// Review queue projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ReviewQueueProjection {
     pub items: Vec<ReviewQueueItem>,
@@ -130,10 +114,6 @@ pub struct ReviewQueueProjection {
     pub in_progress_count: u32,
     pub computed_at: DateTime<Utc>,
 }
-
-// ── RDM-005: Certification queue projection ───────────────────────────────
-//
-// Lists items awaiting certification.
 
 /// A single item in the certification queue.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -146,7 +126,7 @@ pub struct CertificationQueueItem {
     pub submitted_at: DateTime<Utc>,
 }
 
-/// RDM-005 -- Certification queue projection.
+/// Certification queue projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificationQueueProjection {
     pub items: Vec<CertificationQueueItem>,
@@ -154,10 +134,6 @@ pub struct CertificationQueueProjection {
     pub in_progress_count: u32,
     pub computed_at: DateTime<Utc>,
 }
-
-// ── RDM-006: Drift/revalidation projection ────────────────────────────────
-//
-// Shows nodes with detected drift that need revalidation.
 
 /// A single drift item.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -171,17 +147,13 @@ pub struct DriftItem {
     pub resolved: bool,
 }
 
-/// RDM-006 -- Drift/revalidation projection.
+/// Drift/revalidation projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DriftProjection {
     pub items: Vec<DriftItem>,
     pub unresolved_count: u32,
     pub computed_at: DateTime<Utc>,
 }
-
-// ── RDM-007: Conflict queue projection ────────────────────────────────────
-//
-// Shows active conflicts awaiting resolution.
 
 /// A single conflict item.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -193,17 +165,13 @@ pub struct ConflictQueueItem {
     pub detected_at: DateTime<Utc>,
 }
 
-/// RDM-007 -- Conflict queue projection.
+/// Conflict queue projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConflictQueueProjection {
     pub items: Vec<ConflictQueueItem>,
     pub unresolved_count: u32,
     pub computed_at: DateTime<Utc>,
 }
-
-// ── RDM-008: Objective progress projection ────────────────────────────────
-//
-// Shows overall progress for each objective.
 
 /// Progress summary for a single objective.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -220,16 +188,12 @@ pub struct ObjectiveProgressItem {
     pub progress_percent: u8,
 }
 
-/// RDM-008 -- Objective progress projection.
+/// Objective progress projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ObjectiveProgressProjection {
     pub objectives: Vec<ObjectiveProgressItem>,
     pub computed_at: DateTime<Utc>,
 }
-
-// ── RDM-009: Loop history projection ──────────────────────────────────────
-//
-// Shows the history of cycles within a loop for comparison.
 
 /// Summary of a single cycle in the loop history.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -245,7 +209,7 @@ pub struct LoopHistoryCycleItem {
     pub completed_at: Option<DateTime<Utc>>,
 }
 
-/// RDM-009 -- Loop history projection.
+/// Loop history projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LoopHistoryProjection {
     pub loop_id: String,
@@ -254,10 +218,6 @@ pub struct LoopHistoryProjection {
     pub total_cycles: u32,
     pub computed_at: DateTime<Utc>,
 }
-
-// ── RDM-010: Artifact timeline projection ─────────────────────────────────
-//
-// Chronological view of all artifacts produced.
 
 /// A single artifact in the timeline.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -270,19 +230,13 @@ pub struct ArtifactTimelineItem {
     pub created_at: DateTime<Utc>,
 }
 
-/// RDM-010 -- Artifact timeline projection.
+/// Artifact timeline projection.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ArtifactTimelineProjection {
     pub artifacts: Vec<ArtifactTimelineItem>,
     pub total_count: u32,
     pub computed_at: DateTime<Utc>,
 }
-
-// ── Stale projection lifecycle ─────────────────────────────────────────────
-//
-// Every projection must expose a staleness indicator so consumers can
-// distinguish fresh derived data from stale-but-valid or rebuild-failed data.
-// This closes the stale rebuild/projection lifecycle per playbook rule 6.
 
 /// Staleness status for any read-model projection.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]

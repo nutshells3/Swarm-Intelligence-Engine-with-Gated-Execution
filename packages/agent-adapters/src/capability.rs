@@ -21,7 +21,7 @@ pub enum AdapterHealth {
     Unknown,
 }
 
-/// ADT-009 -- A registered adapter's capability record.
+/// A registered adapter's capability record.
 ///
 /// The capability registry maintains one entry per available agent adapter.
 /// The control plane queries this to decide which adapter to use for a
@@ -95,7 +95,7 @@ impl AdapterCapabilityRegistry {
         }
     }
 
-    /// ADT-009: Validate adapter availability on startup.
+    /// Validate adapter availability on startup.
     ///
     /// Checks each registered adapter's health and updates the registry.
     /// Adapters that are detected but not reachable are marked as Unhealthy.
@@ -115,7 +115,7 @@ impl AdapterCapabilityRegistry {
         results
     }
 
-    /// ADT-009: Get a summary of all adapters and their health status.
+    /// Get a summary of all adapters and their health status.
     pub fn summary(&self) -> Vec<(&str, AgentKind, AdapterHealth, &str)> {
         self.adapters
             .iter()

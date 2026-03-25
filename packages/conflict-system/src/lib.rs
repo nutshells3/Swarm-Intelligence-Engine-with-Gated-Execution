@@ -1,4 +1,4 @@
-//! Conflict system (CNF-001 through CNF-010).
+//! Conflict system.
 //!
 //! This crate handles incompatible worker outputs without silent overwrite.
 //! Conflicts are first-class records with full history retention.
@@ -8,16 +8,9 @@
 //! - Do not lose conflict history (even after resolution).
 //! - Same conflict trigger on same artifact set must not create duplicates
 //!   (idempotency via `conflict_fingerprint`).
-//!
-//! Items: CNF-001 through CNF-010.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
-// ── CNF-001: Conflict classes ───────────────────────────────────────────
-//
-// CSV guardrail: "Define conflict classes."
-// Acceptance: classes are typed enum, not string.
 
 /// Classification of a conflict between concurrent worker outputs.
 ///
@@ -42,11 +35,6 @@ pub enum ConflictClass {
     MainlineIntegration,
 }
 
-// ── CNF-002: Conflict creation triggers ─────────────────────────────────
-//
-// CSV guardrail: "Define conflict creation triggers."
-// Acceptance: triggers are explicit and typed.
-
 /// What triggered the creation of a conflict record.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -68,11 +56,6 @@ pub enum ConflictTrigger {
     /// Manual conflict report by a human reviewer.
     ManualReport,
 }
-
-// ── CNF-003: Competing artifact linking rules ───────────────────────────
-//
-// CSV guardrail: "Define competing-artifact linking rules."
-// Acceptance: links are explicit, bidirectional, and typed.
 
 /// A reference to one side of a competing artifact pair.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -105,7 +88,7 @@ pub enum ConflictStatus {
     Dismissed,
 }
 
-/// Full conflict record (CNF-001 through CNF-003 combined).
+/// Full conflict record.
 ///
 /// This is the first-class conflict object. It is never silently
 /// overwritten or deleted. Even after resolution, the record is retained
@@ -135,16 +118,7 @@ pub struct ConflictRecord {
     pub updated_at: DateTime<Utc>,
 }
 
-// ── CNF-004 to CNF-007: Conflict creation by class ──────────────────────
-//
-// CSV guardrails:
-//   CNF-004: "Implement divergence conflict creation."
-//   CNF-005: "Implement decomposition conflict creation."
-//   CNF-006: "Implement evidence conflict creation."
-//   CNF-007: "Implement review disagreement conflict creation."
-// Acceptance: each class has an explicit creation payload.
-
-/// Payload for creating a divergence conflict (CNF-004).
+/// Payload for creating a divergence conflict.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DivergenceConflictPayload {
     /// The nodes whose outputs diverged.
@@ -155,7 +129,7 @@ pub struct DivergenceConflictPayload {
     pub overlap_details: Option<String>,
 }
 
-/// Payload for creating a decomposition conflict (CNF-005).
+/// Payload for creating a decomposition conflict.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DecompositionConflictPayload {
     /// The source unit of work that was decomposed differently.
@@ -164,7 +138,7 @@ pub struct DecompositionConflictPayload {
     pub competing_tree_refs: Vec<String>,
 }
 
-/// Payload for creating an evidence conflict (CNF-006).
+/// Payload for creating an evidence conflict.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EvidenceConflictPayload {
     /// The claim that received contradictory evidence.
@@ -175,7 +149,7 @@ pub struct EvidenceConflictPayload {
     pub contradiction_summary: String,
 }
 
-/// Payload for creating a review disagreement conflict (CNF-007).
+/// Payload for creating a review disagreement conflict.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ReviewDisagreementPayload {
     /// The artifact that received conflicting reviews.
@@ -185,11 +159,6 @@ pub struct ReviewDisagreementPayload {
     /// Summary of the disagreement.
     pub disagreement_summary: String,
 }
-
-// ── CNF-008: Adjudication task generation ───────────────────────────────
-//
-// CSV guardrail: "Implement adjudication task generation."
-// Acceptance: adjudication is an explicit task, not a silent merge.
 
 /// Adjudication urgency level.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -228,14 +197,6 @@ pub struct AdjudicationTask {
     pub updated_at: DateTime<Utc>,
 }
 
-// ── CNF-009: Conflict history retention ─────────────────────────────────
-//
-// CSV guardrail: "Implement conflict history retention."
-//   "Do not lose conflict history."
-//   "Keep semantic conflict history even after resolution for future
-//   drift analysis."
-// Acceptance: conflict history is never deleted.
-
 /// A snapshot of a conflict at a point in its lifecycle, used for
 /// history retention and drift analysis.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -253,11 +214,6 @@ pub struct ConflictHistoryEntry {
     /// When this history entry was recorded.
     pub recorded_at: DateTime<Utc>,
 }
-
-// ── CNF-010: Conflict resolution projection ─────────────────────────────
-//
-// CSV guardrail: "Implement conflict resolution projection."
-// Acceptance: resolution is explicit and projected into local state.
 
 /// How a conflict was resolved.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]

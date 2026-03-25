@@ -1,4 +1,4 @@
-//! Stale certification invalidation types (FCG-012, FCG-013).
+//! Stale certification invalidation types.
 //!
 //! This module provides the invalidation record and tracking types that
 //! ensure stale certification results are never silently kept as valid.
@@ -11,11 +11,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::certification::StaleReason;
-
-// ── FCG-012 (detail): Stale invalidation record ────────────────────────
-//
-// CSV guardrail: "stale invalidation simulation."
-// Acceptance: invalidation is recorded, not silent.
 
 /// A record of a certification result being invalidated due to staleness.
 /// These records are never deleted so the system retains a full audit trail

@@ -46,8 +46,6 @@ use ui_models::projections::{
 };
 use state_model::{CyclePhase, NodeLane, NodeLifecycle, TaskStatus};
 
-// ── Task board projection ───────────────────────────────────────────────
-
 /// A single task item for the board view.
 ///
 /// **Canonical equivalent (CD-04):** `ui_models::projections::TaskBoardItem` (RDM-001).
@@ -241,9 +239,7 @@ pub async fn task_board(
     Ok(Json(TaskBoardProjection::from(canonical)))
 }
 
-// ── Node graph projection (for React Flow) ──────────────────────────────
-//
-// Canonical type: ui_models::projections::NodeGraphProjection (RDM-002).
+// Canonical type: ui_models::projections::NodeGraphProjection.
 // Divergence: this handler uses `String` for lane/lifecycle instead of
 // the `NodeLane`/`NodeLifecycle` enums from state-model, and omits
 // `task_count`/`completed_task_count` (kept simple for React Flow).
@@ -389,8 +385,6 @@ pub async fn node_graph(
     Ok(Json(NodeGraphProjection::from(canonical)))
 }
 
-// ── Branch/mainline projection ──────────────────────────────────────────
-
 /// A node in the branch/mainline view.
 ///
 /// **Canonical equivalent (CD-04):** `ui_models::projections::BranchMainlineItem` (RDM-003).
@@ -532,8 +526,6 @@ pub async fn branch_mainline(
     Ok(Json(BranchMainlineProjection::from(canonical)))
 }
 
-// ── Review queue projection (REV-015) ───────────────────────────────────
-
 /// A node awaiting review (from node lifecycle state).
 ///
 /// **Canonical equivalent (CD-04):** `ui_models::projections::ReviewQueueItem` (RDM-004).
@@ -598,7 +590,7 @@ impl From<CanonicalReviewQueueItem> for PendingReviewItem {
 
 /// GET /api/projections/review-queue
 ///
-/// REV-015: Dedicated review queue projection that combines both
+/// Dedicated review queue projection that combines both
 /// node lifecycle state and pending review artifacts.
 /// Canonical type: `ui_models::projections::ReviewQueueProjection` (RDM-004).
 ///
@@ -634,7 +626,7 @@ pub async fn review_queue(
         });
     }
 
-    // REV-015: Also include scheduled/in-progress review artifacts from review_artifacts table.
+    // Also include scheduled/in-progress review artifacts from review_artifacts table.
     // Build canonical CanonicalReviewQueueItem first, then convert to API type.
     let review_rows = sqlx::query(
         r#"SELECT review_id, review_kind, target_ref, status, recorded_at
@@ -675,8 +667,6 @@ pub async fn review_queue(
         review_artifact_count,
     }))
 }
-
-// ── Certification queue projection ──────────────────────────────────────
 
 /// A node awaiting certification.
 ///
@@ -777,8 +767,6 @@ pub async fn certification_queue(
     // Step 2: Convert canonical -> API wire type.
     Ok(Json(CertificationQueueProjection::from(canonical)))
 }
-
-// ── Objective progress projection ───────────────────────────────────────
 
 /// Progress summary for a single objective.
 ///
@@ -911,8 +899,6 @@ pub async fn objective_progress(
     Ok(Json(ObjectiveProgressProjection::from(canonical)))
 }
 
-// ── Drift projection (RDM-006) ──────────────────────────────────────────
-
 /// A single drift item.
 ///
 /// **Canonical equivalent (CD-04):** `ui_models::projections::DriftItem` (RDM-006).
@@ -1033,8 +1019,6 @@ pub async fn drift(
 
     Ok(Json(api))
 }
-
-// ── Loop history projection (RDM-009) ───────────────────────────────────
 
 /// Summary of a single cycle in a loop's history.
 ///
@@ -1173,8 +1157,6 @@ pub async fn loop_history(
         total_cycles,
     }))
 }
-
-// ── Artifact timeline projection (RDM-010) ──────────────────────────────
 
 /// A single artifact in the timeline.
 ///

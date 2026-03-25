@@ -52,7 +52,7 @@ impl<T: AgentAdapter> BoxedAdapter for T {
 /// with `register()`.
 pub struct AdapterRegistry {
     adapters: Vec<Box<dyn BoxedAdapter>>,
-    /// ADT-009: Capability registry populated during auto_detect.
+    /// Capability registry populated during auto_detect.
     pub capabilities: AdapterCapabilityRegistry,
 }
 
@@ -67,7 +67,7 @@ impl AdapterRegistry {
 
     /// Register a new adapter and record its capabilities.
     pub fn register<A: AgentAdapter + 'static>(&mut self, adapter: A) {
-        // ADT-009: Build a capability record from the adapter metadata.
+        // Build a capability record from the adapter metadata.
         let cap = build_capability_record(&adapter);
         self.capabilities.register(cap);
         self.adapters.push(Box::new(adapter));
@@ -118,7 +118,7 @@ impl AdapterRegistry {
             }
         }
 
-        // ADT-016: Check for custom CLI adapter via env var.
+        // Check for custom CLI adapter via env var.
         if let Ok(cli_path) = std::env::var("SWARM_CUSTOM_CLI") {
             if !cli_path.is_empty() {
                 tracing::info!(path = %cli_path, "Auto-detected SWARM_CUSTOM_CLI");
@@ -187,7 +187,7 @@ impl AdapterRegistry {
         self.adapters.first().map(|a| a.as_ref())
     }
 
-    /// ADT-009: Select the best adapter with fallback support.
+    /// Select the best adapter with fallback support.
     ///
     /// Returns the preferred adapter if available and healthy.
     /// If the preferred adapter is unhealthy or unavailable, returns
@@ -226,7 +226,7 @@ impl AdapterRegistry {
         self.adapters.first().map(|a| a.as_ref())
     }
 
-    /// ADT-009: Mark an adapter as unhealthy after a failure.
+    /// Mark an adapter as unhealthy after a failure.
     ///
     /// This allows the registry to skip unhealthy adapters in subsequent
     /// `select_with_fallback` calls.
@@ -249,7 +249,7 @@ impl AdapterRegistry {
             .collect()
     }
 
-    /// ADT-009: Return an ordered list of adapters for fallback iteration.
+    /// Return an ordered list of adapters for fallback iteration.
     ///
     /// The dispatch layer can iterate through this list, trying each adapter
     /// in order until one succeeds.
@@ -301,7 +301,7 @@ fn which(cmd: &str) -> Result<String, ()> {
     }
 }
 
-/// ADT-009: Build a capability record from an adapter's trait metadata.
+/// Build a capability record from an adapter's trait metadata.
 fn build_capability_record<A: AgentAdapter>(adapter: &A) -> AdapterCapabilityRecord {
     let kind = adapter.agent_kind();
     let name = adapter.name().to_string();

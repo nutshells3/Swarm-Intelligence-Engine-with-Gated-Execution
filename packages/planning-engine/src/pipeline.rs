@@ -20,8 +20,6 @@ use crate::schemas::{
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-// ─── Shared error type ──────────────────────────────────────────────────────
-
 /// Errors that any planning pipeline step can produce.
 ///
 /// This is the unified error type across PLAN-010 through PLAN-017.
@@ -90,8 +88,6 @@ impl fmt::Display for PlanningError {
 
 impl std::error::Error for PlanningError {}
 
-// ─── PLAN-010: Objective expansion pipeline ─────────────────────────────────
-
 /// Raw objective text as received from a user conversation before
 /// structured expansion.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -102,12 +98,12 @@ pub struct RawObjective {
     pub source_conversation_id: Option<String>,
 }
 
-/// PLAN-010 -- Objective expansion pipeline.
+/// Objective expansion pipeline.
 ///
 /// Expands a vague, free-form objective into a structured
 /// [`ObjectiveIntake`] record.  The implementation must populate at least
 /// `summary`, `desired_outcome`, and `success_metric` to satisfy the
-/// PLAN-001 schema validation.
+/// schema validation.
 ///
 /// CSV expected output: "Objective expansion pipeline that turns vague
 /// goals into architecture and milestone drafts."
@@ -133,9 +129,7 @@ pub trait ObjectiveExpander {
     ) -> Result<ObjectiveIntake, PlanningError>;
 }
 
-// ─── PLAN-011: Architecture draft generation ────────────────────────────────
-
-/// PLAN-011 -- Architecture draft generation.
+/// Architecture draft generation.
 ///
 /// Generates an [`ArchitectureDraft`] from a validated
 /// [`ObjectiveIntake`].  The draft decomposes the objective into typed
@@ -164,9 +158,7 @@ pub trait ArchitectureDrafter {
     ) -> Result<ArchitectureDraft, PlanningError>;
 }
 
-// ─── PLAN-012: Milestone explosion from architecture draft ──────────────────
-
-/// PLAN-012 -- Milestone explosion.
+/// Milestone explosion.
 ///
 /// Creates a [`MilestoneTree`] from an [`ArchitectureDraft`].  Each
 /// architecture component should map to one or more milestone nodes,
@@ -196,8 +188,6 @@ pub trait MilestoneExploder {
     ) -> Result<MilestoneTree, PlanningError>;
 }
 
-// ─── PLAN-013: Dependency extraction for milestones ─────────────────────────
-
 /// Optional roadmap context supplied to the dependency extractor so it
 /// can create cross-reference edges (RoadmapLink).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -206,7 +196,7 @@ pub struct RoadmapContext {
     pub roadmap_node_ids: Vec<String>,
 }
 
-/// PLAN-013 -- Dependency extraction.
+/// Dependency extraction.
 ///
 /// Builds a [`DependencyGraph`] from a [`MilestoneTree`] and optional
 /// [`RoadmapContext`].  The resulting graph must be acyclic for `Blocks`
@@ -240,9 +230,7 @@ pub trait DependencyExtractor {
     ) -> Result<DependencyGraph, PlanningError>;
 }
 
-// ─── PLAN-014: Acceptance criteria generation ───────────────────────────────
-
-/// PLAN-014 -- Acceptance criteria generation.
+/// Acceptance criteria generation.
 ///
 /// Generates [`AcceptanceCriterion`] entries for each milestone in a
 /// [`MilestoneTree`].  Every milestone must have at least one criterion
@@ -271,8 +259,6 @@ pub trait AcceptanceCriteriaGenerator {
     ) -> Result<Vec<AcceptanceCriterion>, PlanningError>;
 }
 
-// ─── PLAN-015: Unresolved question extraction ───────────────────────────────
-
 /// Aggregated plan state passed to the question extractor so it can
 /// identify gaps and open questions across all planning artifacts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -293,7 +279,7 @@ pub struct PlanState {
     pub invariants: Vec<PlanInvariant>,
 }
 
-/// PLAN-015 -- Unresolved question extraction.
+/// Unresolved question extraction.
 ///
 /// Identifies [`UnresolvedQuestion`] entries from the aggregated plan
 /// state.  The count of blocking questions feeds into the plan gate's
@@ -320,9 +306,7 @@ pub trait QuestionExtractor {
     ) -> Result<Vec<UnresolvedQuestion>, PlanningError>;
 }
 
-// ─── PLAN-016: Risk register generation ─────────────────────────────────────
-
-/// PLAN-016 -- Risk register generation.
+/// Risk register generation.
 ///
 /// Creates [`RiskRegisterEntry`] entries from the aggregated plan state.
 /// At least one risk must be identified for the plan gate's
@@ -349,9 +333,7 @@ pub trait RiskGenerator {
     ) -> Result<Vec<RiskRegisterEntry>, PlanningError>;
 }
 
-// ─── PLAN-017: Invariant extraction ─────────────────────────────────────────
-
-/// PLAN-017 -- Invariant extraction.
+/// Invariant extraction.
 ///
 /// Identifies [`PlanInvariant`] entries from the architecture draft and
 /// aggregated plan state.  At least one invariant must exist for the

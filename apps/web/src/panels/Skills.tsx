@@ -4,8 +4,6 @@ import type {
   WorkerTemplateResponse,
 } from '../types/generated';
 
-// ---- Section: Skill Pack List ----
-
 function SkillPackList({ packs }: { packs: SkillPackResponse[] }) {
   return (
     <div className="metric-card" style={{ marginBottom: 12 }}>
@@ -45,8 +43,6 @@ function SkillPackList({ packs }: { packs: SkillPackResponse[] }) {
     </div>
   );
 }
-
-// ---- Section: Worker Template List ----
 
 function WorkerTemplateList({ templates }: { templates: WorkerTemplateResponse[] }) {
   return (
@@ -90,16 +86,12 @@ function WorkerTemplateList({ templates }: { templates: WorkerTemplateResponse[]
   );
 }
 
-// ---- Helpers ----
-
 function formatUnknownList(value: unknown): string {
   if (Array.isArray(value)) return value.join(', ');
   if (typeof value === 'string') return value;
   if (value === null || value === undefined) return '-';
   return JSON.stringify(value);
 }
-
-// ---- Main Skills Panel ----
 
 export default function Skills() {
   const { data: skillPacks, isLoading: packsLoading } = useSkillPacks();

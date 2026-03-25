@@ -1,4 +1,4 @@
-//! Formal-readiness package (M8: FRM-001 through FRM-010).
+//! Formal-readiness package.
 //!
 //! Translates planning/orchestration invariants into machine-readable
 //! predicates for later formal validation (Lean/Isabelle) WITHOUT
@@ -22,9 +22,7 @@ pub mod export;
 pub mod predicates;
 pub mod readiness;
 
-// ── Re-exports for ergonomic imports ─────────────────────────────────────
-
-// FRM-001 through FRM-007: predicate types
+// Re-export primary types for ergonomic imports.
 pub use predicates::{
     AcyclicityPredicate, AdmissibilityRequirement, CertificationSelectionPredicate,
     CertificationSelectionReason, ConflictAdmissibilityPredicate, CycleDetectionResult,
@@ -34,22 +32,18 @@ pub use predicates::{
     TransitionRule,
 };
 
-// FRM-008: export types
 pub use export::{
     ApprovalEffectFact, CertificationFact, ExportedInput, ExportedPredicate, FormalExport,
     GraphFact, LifecycleStateFact,
 };
 
-// FRM-010: plan-to-formal export bridge
 pub use export::export_plan_for_verification;
 
-// FRM-009: consistency check types
 pub use consistency::{
     ConsistencyStatus, ProjectionConsistencyCheck, ProjectionDomain, ProjectionMismatch,
     RebuildAction,
 };
 
-// FRM-010: readiness contract types
 pub use readiness::{
     NamingConvention, ProofCandidateInventory, ProofReadinessLevel, ReadinessContract,
     ReadinessReport, check_readiness_for_export, validate_readiness_contract,

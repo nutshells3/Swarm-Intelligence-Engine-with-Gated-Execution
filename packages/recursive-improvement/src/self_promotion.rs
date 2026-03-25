@@ -13,8 +13,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ── REC-008: Self-promotion denial ───────────────────────────────────────
-
 /// The denial rule: self-promotion is denied by default.
 /// CSV: "P0! denial rule" -- this is the highest priority safety rule.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

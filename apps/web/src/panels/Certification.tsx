@@ -150,7 +150,6 @@ export default function Certification() {
       {isLoading && <p className="text-muted">Loading certification data...</p>}
       {projError && <p style={{ color: '#ef4444' }}>Error: {String(projError)}</p>}
 
-      {/* Summary bar */}
       {entries && (
         <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: '#eab308' }}>

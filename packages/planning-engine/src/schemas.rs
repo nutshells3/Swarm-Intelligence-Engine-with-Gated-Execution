@@ -7,8 +7,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ─── PLAN-001: Objective intake schema ──────────────────────────────────────
-//
 // Captures the initial objective as received from a user conversation.
 // Fields: summary, desired outcome, current stage (typed enum),
 // source conversation linkage, and a machine-checkable success metric.
@@ -31,7 +29,7 @@ pub enum ObjectiveStage {
     Abandoned,
 }
 
-/// PLAN-001 -- Objective intake record.
+/// Objective intake record.
 ///
 /// This is the canonical starting point of every planning flow.  The
 /// control plane requires `summary`, `desired_outcome`, and
@@ -57,8 +55,6 @@ pub struct ObjectiveIntake {
     pub updated_at: DateTime<Utc>,
 }
 
-// ─── PLAN-002: Architecture draft schema ────────────────────────────────────
-//
 // Machine-readable representation of an architecture proposal linked to
 // an objective.  Components carry typed roles so the decomposer can map
 // them to skill packs and worker templates.
@@ -114,7 +110,7 @@ pub enum ArchitectureDraftStatus {
     Superseded,
 }
 
-/// PLAN-002 -- Architecture draft.
+/// Architecture draft.
 ///
 /// Each draft is immutable once created; revisions produce a new draft
 /// with an incremented `revision` number and the same `objective_id`.
@@ -139,8 +135,6 @@ pub struct ArchitectureDraft {
     pub created_at: DateTime<Utc>,
 }
 
-// ─── PLAN-003: Milestone tree schema ────────────────────────────────────────
-//
 // A tree of milestones decomposing an objective.  Each node carries its
 // own acceptance-criteria links and ordering for sequencing.
 // Dependencies: PLAN-001 (objective_id), PLAN-002 (draft_id).
@@ -185,7 +179,7 @@ pub struct MilestoneNode {
     pub component_id: Option<String>,
 }
 
-/// PLAN-003 -- Milestone tree.
+/// Milestone tree.
 ///
 /// The tree is rooted at a single objective and optionally linked to an
 /// architecture draft.  The `milestones` vector encodes the full tree
@@ -204,8 +198,6 @@ pub struct MilestoneTree {
     pub updated_at: DateTime<Utc>,
 }
 
-// ─── PLAN-004: Dependency graph schema ──────────────────────────────────────
-//
 // Links milestones, roadmap nodes, and other planning elements.
 // The graph must be acyclic for `blocks` edges.
 // Dependencies: PLAN-003, RMS-001, RMS-002.
@@ -257,7 +249,7 @@ pub struct DependencyEdge {
     pub rationale: Option<String>,
 }
 
-/// PLAN-004 -- Dependency graph.
+/// Dependency graph.
 ///
 /// The control plane must verify:
 /// 1. Acyclicity for `Blocks` edges.
@@ -276,8 +268,6 @@ pub struct DependencyGraph {
     pub updated_at: DateTime<Utc>,
 }
 
-// ─── PLAN-005: Acceptance criteria schema ───────────────────────────────────
-//
 // Each criterion is attached to a milestone (or plan/node) and carries a
 // typed verification method so the control plane knows how to evaluate it.
 
@@ -323,7 +313,7 @@ pub enum CriterionOwnerKind {
     Node,
 }
 
-/// PLAN-005 -- Acceptance criterion.
+/// Acceptance criterion.
 ///
 /// Connected to a plan, milestone, or node via `owner_id` + `owner_kind`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -349,8 +339,6 @@ pub struct AcceptanceCriterion {
     pub updated_at: DateTime<Utc>,
 }
 
-// ─── PLAN-006: Unresolved question schema ───────────────────────────────────
-//
 // Tracks open questions with resolution status and blocking effects.
 // The plan gate (PLAN-009) uses the count of unresolved questions against
 // a budget to decide whether implementation may proceed.
@@ -381,7 +369,7 @@ pub enum QuestionResolutionStatus {
     Dismissed,
 }
 
-/// PLAN-006 -- Unresolved question.
+/// Unresolved question.
 ///
 /// The `blocking_ids` field lists milestone or node IDs that cannot
 /// proceed until this question reaches `Resolved` or `Dismissed`.
@@ -409,8 +397,6 @@ pub struct UnresolvedQuestion {
     pub updated_at: DateTime<Utc>,
 }
 
-// ─── PLAN-007: Risk register schema ────────────────────────────────────────
-//
 // Tracks identified risks with severity, likelihood, and mitigation plans.
 
 /// Qualitative severity of a risk's impact if realized.
@@ -449,7 +435,7 @@ pub enum RiskStatus {
     Accepted,
 }
 
-/// PLAN-007 -- Risk register entry.
+/// Risk register entry.
 ///
 /// Each entry captures a single risk, its qualitative severity/likelihood,
 /// the affected milestones, and a concrete mitigation plan.
@@ -479,8 +465,6 @@ pub struct RiskRegisterEntry {
     pub updated_at: DateTime<Utc>,
 }
 
-// ─── PLAN-008: Invariant schema ────────────────────────────────────────────
-//
 // Machine-checkable invariants that must hold throughout the planning and
 // execution lifecycle.
 
@@ -526,7 +510,7 @@ pub enum InvariantStatus {
     Suspended,
 }
 
-/// PLAN-008 -- Plan invariant.
+/// Plan invariant.
 ///
 /// Invariants are machine-checkable properties. The `predicate` field
 /// contains a structured expression the control plane evaluates.
@@ -556,8 +540,6 @@ pub struct PlanInvariant {
     pub updated_at: DateTime<Utc>,
 }
 
-// ─── PLAN-009: Plan gate schema ────────────────────────────────────────────
-//
 // The gate controls when implementation is unlocked.  It enumerates every
 // condition that must be met and tracks the current evaluation of each.
 // This is the most critical schema: if the gate is not explicit and
@@ -625,7 +607,7 @@ pub enum GateStatus {
     Overridden,
 }
 
-/// PLAN-009 -- Plan gate definition.
+/// Plan gate definition.
 ///
 /// The gate is the single point that controls whether implementation may
 /// begin.  The control plane evaluates `condition_entries` and derives
@@ -658,9 +640,7 @@ pub struct PlanGateDefinition {
     pub evaluated_at: DateTime<Utc>,
 }
 
-// ─── Validation helpers ─────────────────────────────────────────────────────
-
-/// Errors detected during dependency graph validation (PLAN-004 checks).
+/// Errors detected during dependency graph validation.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum DependencyGraphError {

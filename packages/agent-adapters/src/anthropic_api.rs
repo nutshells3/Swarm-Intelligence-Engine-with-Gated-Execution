@@ -193,8 +193,6 @@ impl AgentAdapter for AnthropicApiAdapter {
     }
 }
 
-// ── Response parsing helpers ─────────────────────────────────────────────
-
 struct ParsedAnthropicResponse {
     text: String,
     usage: Option<TokenUsage>,

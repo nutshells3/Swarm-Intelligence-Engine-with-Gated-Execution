@@ -2,12 +2,6 @@ import { useState } from 'react';
 import { useReviews, useApproveReview, useReviewDigest } from '../api/hooks';
 import type { ReviewResponse } from '../types/generated';
 
-// ---- Review kind tabs for REV-016/017/018/019 ----
-//
-// All review_kind values come from review-governance::ReviewKind
-// (packages/review-governance/src/artifacts.rs). The generated TS
-// types are in apps/web/src/types/generated.ts::ReviewResponse.
-
 type ReviewFilter = 'all' | 'planning' | 'architecture' | 'direction' | 'milestone' | 'implementation';
 
 const REVIEW_FILTERS: { key: ReviewFilter; label: string }[] = [
@@ -18,8 +12,6 @@ const REVIEW_FILTERS: { key: ReviewFilter; label: string }[] = [
   { key: 'milestone', label: 'Milestone' },
   { key: 'implementation', label: 'Implementation' },
 ];
-
-// ---- Helpers ----
 
 /** Format a JSONB conditions value as a readable string. */
 function formatConditions(conditions: unknown): string {
@@ -54,8 +46,6 @@ function statusColor(status: string): string {
       return '#6b7280';
   }
 }
-
-// ---- Section: Review Table (REV-016/017/018) ----
 
 function ReviewTable({
   reviews,
@@ -132,8 +122,6 @@ function ReviewTable({
   );
 }
 
-// ---- Main Reviews Panel (IDE-011 / IDE-012 / IDE-013) ----
-
 export default function Reviews() {
   const { data: reviews, isLoading } = useReviews();
   const approveReview = useApproveReview();
@@ -166,7 +154,6 @@ export default function Reviews() {
     <div className="panel">
       <h2>Reviews</h2>
 
-      {/* Sub-filter tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
         {REVIEW_FILTERS.map((f) => (
           <button
@@ -196,9 +183,8 @@ export default function Reviews() {
         />
       )}
 
-      {/* REV-019: Human digest summary */}
       <div style={{ marginTop: 20, padding: '12px 0', borderTop: '1px solid #334155' }}>
-        <h3 style={{ margin: '0 0 8px' }}>Review Digest (REV-019)</h3>
+        <h3 style={{ margin: '0 0 8px' }}>Review Digest</h3>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input
             type="text"

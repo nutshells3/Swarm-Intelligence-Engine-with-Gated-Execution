@@ -2,15 +2,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use user_policy::UserPolicySnapshot;
 
-// ── Event types ─────────────────────────────────────────────────────────
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EventKind {
-    // ── Objective events (EVT-001) ──
     ObjectiveCreated,
     ObjectiveUpdated,
-    // ── Plan events (EVT-002) ──
     PlanCreated,
     PlanUpdated,
     PlanGateChanged,
@@ -19,17 +15,14 @@ pub enum EventKind {
     PlanGateEvaluated,
     PlanGateForcedOverride,
     PlanUpdatedFromExtract,
-    // ── Loop events (EVT-003) ──
     LoopCreated,
     LoopCycleAdvanced,
-    // ── Cycle events (EVT-004) ──
     CycleCreated,
     CyclePhaseTransitioned,
     CycleCompleted,
     ExecutionCompleted,
     IntegrationVerificationFailed,
     PhaseStatusRecorded,
-    // ── Task events (EVT-005) ──
     TaskCreated,
     TaskStatusChanged,
     TaskAttemptStarted,
@@ -39,12 +32,10 @@ pub enum EventKind {
     TaskAttemptCompleted,
     TaskRetryScheduled,
     IntegrationVerificationComplete,
-    // ── Worker events (EVT-006) ──
     WorkerRegistered,
     WorkerHeartbeatReceived,
     WorkerCompleted,
     WorkerStatusHeartbeat,
-    // ── Certification events (EVT-007, EVT-008) ──
     CertificationSubmitted,
     CertificationReturned,
     CertificationCompleted,
@@ -52,18 +43,15 @@ pub enum EventKind {
     CertificationConfigUpdated,
     CertificationSettingsUpdated,
     DualFormalizationDiverged,
-    // ── Conflict events (EVT-009) ──
     ConflictCreated,
     ConflictResolved,
     ConflictAutoResolved,
     AdjudicationTaskCreated,
     FileConflictDetected,
     MergeConflictDetected,
-    // ── Mainline events (EVT-010) ──
     MainlineIntegrationAttempted,
     MainlineIntegrationCompleted,
     IntegrationVerifyNodeCreated,
-    // ── Roadmap events ──
     RoadmapNodeCreated,
     RoadmapNodeAbsorbed,
     RoadmapReprioritized,
@@ -73,7 +61,6 @@ pub enum EventKind {
     RoadmapReordered,
     RoadmapTrackChanged,
     MilestoneBridged,
-    // ── Review events ──
     ReviewArtifactCreated,
     ReviewCompleted,
     ReviewCreated,
@@ -81,13 +68,10 @@ pub enum EventKind {
     ReviewApproved,
     ReviewAutoApproved,
     ReviewNeeded,
-    // ── Skill events ──
     SkillPackRegistered,
     WorkerTemplateCreated,
-    // ── Policy events ──
     UserPolicySnapshotSaved,
     DeploymentModeChanged,
-    // ── Conversation / chat events ──
     ChatSessionCreated,
     ChatSessionLinkedToObjective,
     ConstraintsExtracted,
@@ -95,11 +79,9 @@ pub enum EventKind {
     ConversationExtracted,
     BacklogDraftCreated,
     ExtractProcessed,
-    // ── Drift events ──
     DriftDetected,
     ObjectiveDriftDetected,
     DependencyDriftDetected,
-    // ── Recursive improvement events ──
     ComparisonArtifactCreated,
     LoopScoreCreated,
     MilestoneTemplatesCreated,
@@ -108,18 +90,14 @@ pub enum EventKind {
     RecursiveReportGenerated,
     SuccessPatternRecorded,
     RoadmapSuggestionRecorded,
-    // ── Git / worktree events ──
     WorktreeBound,
     WorktreeReleased,
     DirtyWorktreeDetected,
-    // ── Observability events ──
     TickHeartbeat,
     RetentionPolicyEnforced,
     ProjectionSnapshot,
-    // ── Peer events ──
     PeerMessageSent,
     PeerMessageAcknowledged,
-    // ── Node events ──
     NodeEdgeCreated,
 }
 

@@ -12,11 +12,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use state_model::{CyclePhase, NodeLane, NodeLifecycle, PlanGate, TaskStatus};
 
-// ── IDE-001: Objective intake panel ───────────────────────────────────────
-//
-// Data model backing the objective intake form/panel.
-
-/// IDE-001 -- Objective intake panel data model.
+/// Objective intake panel data model.
 ///
 /// Carries all fields needed to render the objective intake form
 /// and its current state.
@@ -44,10 +40,6 @@ pub struct ObjectiveIntakePanelData {
     pub validation_errors: Vec<String>,
 }
 
-// ── IDE-002: Planning panel ───────────────────────────────────────────────
-//
-// Data model backing the planning panel (architecture + milestones + gate).
-
 /// Gate condition display item.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GateConditionDisplay {
@@ -56,7 +48,7 @@ pub struct GateConditionDisplay {
     pub description: String,
 }
 
-/// IDE-002 -- Planning panel data model.
+/// Planning panel data model.
 ///
 /// Aggregates planning state for display: objective, architecture
 /// summary, milestone count, gate status, and open questions.
@@ -83,10 +75,6 @@ pub struct PlanningPanelData {
     pub updated_at: DateTime<Utc>,
 }
 
-// ── IDE-003: Milestone tree panel ─────────────────────────────────────────
-//
-// Data model backing the milestone tree visualization.
-
 /// A milestone node for tree rendering.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MilestoneTreeNodeDisplay {
@@ -105,7 +93,7 @@ pub struct MilestoneTreeNodeDisplay {
     pub derived_node_count: u32,
 }
 
-/// IDE-003 -- Milestone tree panel data model.
+/// Milestone tree panel data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MilestoneTreePanelData {
     pub objective_id: String,
@@ -117,9 +105,7 @@ pub struct MilestoneTreePanelData {
     pub updated_at: DateTime<Utc>,
 }
 
-// ── IDE-004: Task board panel ─────────────────────────────────────────────
-
-/// IDE-004 -- Task board panel data model.
+/// Task board panel data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskBoardPanelData {
     pub cycle_id: Option<String>,
@@ -148,9 +134,7 @@ pub struct TaskBoardCardData {
     pub status: TaskStatus,
 }
 
-// ── IDE-005: Branch/mainline panel ────────────────────────────────────────
-
-/// IDE-005 -- Branch/mainline panel data model.
+/// Branch/mainline panel data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BranchMainlinePanelData {
     pub lanes: Vec<LaneColumnData>,
@@ -177,9 +161,7 @@ pub struct LaneNodeCardData {
     pub promotion_eligible: bool,
 }
 
-// ── IDE-006: Conflict queue panel ─────────────────────────────────────────
-
-/// IDE-006 -- Conflict queue panel data model.
+/// Conflict queue panel data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConflictQueuePanelData {
     pub conflicts: Vec<ConflictCardData>,
@@ -197,9 +179,7 @@ pub struct ConflictCardData {
     pub detected_at: DateTime<Utc>,
 }
 
-// ── IDE-007: Certification queue panel ────────────────────────────────────
-
-/// IDE-007 -- Certification queue panel data model.
+/// Certification queue panel data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificationQueuePanelData {
     pub items: Vec<CertificationCardData>,
@@ -218,9 +198,7 @@ pub struct CertificationCardData {
     pub submitted_at: DateTime<Utc>,
 }
 
-// ── IDE-008: User execution settings panel ────────────────────────────────
-
-/// IDE-008 -- User execution settings panel data model.
+/// User execution settings panel data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExecutionSettingsPanelData {
     pub policy_version: u32,
@@ -233,9 +211,7 @@ pub struct ExecutionSettingsPanelData {
     pub updated_at: DateTime<Utc>,
 }
 
-// ── IDE-009: Skill/agent template panel ───────────────────────────────────
-
-/// IDE-009 -- Skill/agent template panel data model.
+/// Skill/agent template panel data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SkillTemplatePanelData {
     pub skill_packs: Vec<SkillPackSummary>,
@@ -262,9 +238,7 @@ pub struct WorkerTemplateSummary {
     pub active: bool,
 }
 
-// ── IDE-010: Loop-history comparison panel ────────────────────────────────
-
-/// IDE-010 -- Loop-history comparison panel data model.
+/// Loop-history comparison panel data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LoopHistoryComparisonPanelData {
     pub loop_id: String,
@@ -285,9 +259,7 @@ pub struct CycleComparisonData {
     pub duration_seconds: Option<u64>,
 }
 
-// ── IDE-011: Plan review page ─────────────────────────────────────────────
-
-/// IDE-011 -- Plan review page data model.
+/// Plan review page data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PlanReviewPageData {
     pub plan_id: String,
@@ -320,9 +292,7 @@ pub struct RiskDisplay {
     pub status: String,
 }
 
-// ── IDE-012: Architecture review page ─────────────────────────────────────
-
-/// IDE-012 -- Architecture review page data model.
+/// Architecture review page data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ArchitectureReviewPageData {
     pub draft_id: String,
@@ -346,9 +316,7 @@ pub struct ComponentDisplay {
     pub dependency_count: u32,
 }
 
-// ── IDE-013: Development-direction review page ────────────────────────────
-
-/// IDE-013 -- Development-direction review page data model.
+/// Development-direction review page data model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DevelopmentDirectionReviewPageData {
     pub objective_id: String,

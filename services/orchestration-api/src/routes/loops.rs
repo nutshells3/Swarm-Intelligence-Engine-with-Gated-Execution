@@ -32,7 +32,7 @@ pub async fn create_loop(
     let mut tx = state.pool.begin().await.map_err(internal_error)?;
     let loop_id = Uuid::now_v7().to_string();
 
-    // BND-010: scoped idempotency check
+    // Scoped idempotency check
     let duplicate: Option<String> = sqlx::query_scalar(
         "select aggregate_id from event_journal where aggregate_kind = 'loop' and idempotency_key = $1 limit 1",
     )
