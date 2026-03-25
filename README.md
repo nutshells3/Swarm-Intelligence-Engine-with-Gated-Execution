@@ -306,4 +306,4 @@ It is best thought of as a **general orchestration engine with research-grade ex
 
 ## License
 
-Proprietary.
+AGPL-3.0. See [LICENSE](LICENSE).
