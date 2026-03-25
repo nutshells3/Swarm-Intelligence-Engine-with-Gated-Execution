@@ -2,36 +2,67 @@
 
 **Swarm Intelligence Engine with Gated Execution**
 
-Give it an engineering objective. It plans, decomposes, dispatches agents in parallel, verifies the result, and learns from failures — all without you babysitting every step.
+A multi-agent orchestration engine that plans before it acts.
 
----
+Give SIEGE an engineering objective and it turns that objective into a gated execution cycle: it extracts intent from conversation, drafts a plan, validates that plan against explicit readiness conditions, decomposes the work into a dependency-aware task graph, dispatches agents across isolated git worktrees, integrates the results, and feeds what it learned back into the next cycle.
 
-## Demo
+This is not a “planning-as-a-suggestion” system. In SIEGE, planning is a hard gate. If the plan is incomplete, execution does not start.
 
 <video src="https://github.com/user-attachments/assets/a1b86f0e-d8a7-4d9f-886c-e18f7d02440a" controls width="100%"></video>
 
 ---
 
-## What you can do with it
+## Documentation
 
-**Hand it a goal, get a working codebase back.**
+- [Docs index](docs/README.md)
+- [Core concepts](docs/CONCEPTS.md)
+- [Architecture overview](docs/ARCHITECTURE.md)
+- [Gated execution and planning](docs/GATED_EXECUTION_AND_PLANNING.md)
+- [Formal assurance](docs/FORMAL_ASSURANCE.md)
+- [Adapters and execution](docs/ADAPTERS_AND_EXECUTION.md)
+- [Governance: reviews, conflicts, promotion](docs/GOVERNANCE.md)
+- [Dashboard, API, and CLI](docs/DASHBOARD_API_AND_CLI.md)
+- [Deployment and scaling](docs/DEPLOYMENT_AND_SCALING.md)
+- [Status and maturity](docs/STATUS.md)
+- [Origins and research context](docs/ORIGINS.md)
 
+---
+
+## Why SIEGE
+
+Most multi-agent stacks treat planning as advisory. They can fan out quickly, but weak plans create expensive downstream failures: overlapping file edits, invalid task orderings, merge churn, retries caused by missing acceptance criteria, and fragile execution that only looks scalable until the first dependency breaks.
+
+SIEGE was built to attack that failure mode at the source.
+
+Before implementation begins, the planning engine evaluates a **10-condition gate**. The gate checks whether the objective has been summarized, the architecture is drafted, milestones exist, acceptance criteria are defined, dependencies are valid, invariants are extracted and holding, risks are identified, and unresolved questions remain within budget. If those conditions do not hold, the engine blocks execution instead of pretending the plan is good enough.
+
+That single design choice changes the character of the system. SIEGE is optimized for **controlled parallelism**, **traceable execution**, and **policy-driven orchestration** rather than blind swarm activity.
+
+---
+
+## What SIEGE does
+
+Given a goal such as:
+
+```text
+Build a REST API for user authentication with JWT support, tests, and admin endpoints.
 ```
-"Build a REST API for user authentication with JWT tokens"
-```
 
-SIEGE will:
-1. Call an LLM to draft an architecture and break it into milestones
-2. Evaluate a 9-condition planning gate before writing any code
-3. Decompose the plan into a dependency-aware task graph
-4. Dispatch each task to an isolated git worktree with its own agent
-5. Merge all worktrees, run your build and tests automatically
-6. Learn from failures and retry with context from previous attempts
-7. Optionally route critical claims through formal verification
+SIEGE can:
 
-**Use any LLM you want.** Claude Code, Codex CLI, Anthropic API, OpenAI API, local models via Ollama/vLLM, or any custom CLI tool.
+- extract constraints, decisions, and open questions from conversation,
+- elaborate an architecture and milestone tree,
+- evaluate the planning gate before code generation begins,
+- decompose the objective into a dependency-aware task graph,
+- dispatch different tasks to different agent roles and model providers,
+- isolate concurrent work in separate git worktrees,
+- detect overlap and conflict risk before integration,
+- merge completed work back through controlled integration,
+- run project-aware build and test steps,
+- route selected claims through formal-assurance or certification lanes,
+- persist execution history, failures, and lessons for later cycles.
 
-**Watch it work in real time.** 12-panel web dashboard with live SSE streaming, or use the interactive CLI REPL.
+In other words: SIEGE is not just an agent runner. It is an orchestration engine with planning, control-plane discipline, review surfaces, conflict handling, and optional assurance paths built into the runtime model.
 
 ---
 
@@ -39,239 +70,214 @@ SIEGE will:
 
 ```bash
 # Prerequisites: Docker, Rust 1.86+, Node.js 20+
-docker compose up -d          # PostgreSQL
-make api                      # API server on :8845
-make loop                     # Cycle runner (background)
-make dispatch                 # Worker dispatch (background)
-make web                      # Dashboard on :5173
-```
-
-Or all at once:
-```bash
 make dev
 ```
 
-Demo mode (no LLM calls, mock adapter):
+That starts PostgreSQL, the API server, the loop runner, worker dispatch, and the web dashboard.
+
+Then open:
+
+- Web dashboard: `http://localhost:5173`
+- Swagger UI: `http://127.0.0.1:8845/swagger-ui/`
+
+You can also run services individually:
+
+```bash
+make db
+make api
+make loop
+make dispatch
+make web
+make cli
+```
+
+Demo mode without real LLM calls:
+
 ```bash
 make demo
 ```
-
-Then open `http://localhost:5173`, type an objective, and watch it go.
 
 ---
 
 ## How it works
 
-```
-You: "Build X"
-  |
-  v
-Plan Elaboration ---- LLM drafts architecture, milestones, risks, invariants
-  |
-  v
-9-Condition Gate ---- Blocks execution until the plan is solid
-  |                   (architecture exists, milestones defined, deps acyclic,
-  |                    acceptance criteria set, risks identified, invariants hold,
-  |                    unresolved questions within budget)
-  |
-  v
-Decomposition ------- Scans your repo, calls LLM to split into task DAG
-  |                   Injects failure lessons from previous cycles
-  |
-  v
-Dispatch ------------ Selects adapters, resolves skills, checks concurrency
-  |                   Each task gets its own git worktree
-  |
-  v
-Execution ----------- Agents work in parallel, isolated branches
-  |                   File overlap detection prevents conflicts
-  |
-  v
-Integration --------- Sequential merge, project-type-aware build/test
-  |                   (cargo check, npm test, pytest, make test, go build)
-  |
-  v
-Certification ------- Optional formal-claim gateway with dual formalization
-  |                   Stale detection when upstream changes
-  |
-  v
-Next Cycle ---------- Stores failure patterns, generates new tasks, loops
+```text
+Objective
+  │
+  ▼
+Conversation extraction
+  │  Parse constraints, decisions, and open questions from chat
+  ▼
+Plan elaboration
+  │  Draft architecture, milestones, risks, and invariants
+  ▼
+10-condition planning gate
+  │  Block execution until plan readiness is explicit
+  ▼
+Decomposition
+  │  Build a dependency-aware task graph and inject prior lessons
+  ▼
+Dispatch
+  │  Select adapters, resolve skills, enforce policy and concurrency
+  ▼
+Parallel execution
+  │  Run tasks in isolated git worktrees
+  ▼
+Integration
+  │  Merge results, run build and test workflows, update state
+  ▼
+Review / conflicts / certification
+  │  Surface disputes, gate sensitive claims, preserve auditability
+  ▼
+Next cycle
+     Learn from failures, generate follow-on tasks, continue iterating
 ```
 
-The cycle runner ticks every 3 seconds. Each tick advances all active cycles through their current phase.
+Every major transition is designed to be explicit. SIEGE keeps planning artifacts, execution state, event history, and downstream review or certification consequences tied to the same orchestration loop rather than scattering them across ad hoc scripts.
 
 ---
 
-## Adapters
+## Adapters and policy
 
-SIEGE auto-detects what's available on your system:
+SIEGE is designed to work with multiple execution backends and model providers.
 
-| Adapter | Detection | What it does |
-|---------|-----------|-------------|
-| Claude Code CLI | `claude` on PATH | Full agent with extended thinking |
-| Codex CLI | `codex` on PATH | OpenAI's coding agent |
-| Anthropic API | `ANTHROPIC_API_KEY` env | Direct HTTP to Claude models |
-| OpenAI API | `OPENAI_API_KEY` env | GPT-4o and compatible |
-| Local (Ollama/vLLM) | `OPENAI_API_BASE` env | Any OpenAI-compatible endpoint |
-| Custom CLI | `SWARM_CUSTOM_CLI` env | Any stdin/stdout tool |
-| Mock | `SIEGE_DEMO_MODE=1` | Canned responses for demos |
+The engine can detect or route across:
 
-Multiple adapters can coexist. Policy controls which adapter handles which task class.
+- Claude Code CLI
+- Codex CLI
+- Anthropic API
+- OpenAI-compatible APIs
+- local OpenAI-compatible endpoints
+- custom CLI tools
+- mock/demo adapters
 
----
-
-## Dashboard
-
-12 live panels:
-
-| Panel | What it shows |
-|-------|-------------|
-| Dashboard | Cycle progress, agent status, task summary, gate status, event feed |
-| Chat | Objective creation, conversation extraction, constraint/decision/question capture |
-| Plan | 9-condition gate visualization, milestone tree with status |
-| Tasks | Task board grouped by status, dependency-aware ordering |
-| Graph | Node dependency graph |
-| Branches | Nodes by lane: branch, mainline candidate, mainline, blocked |
-| Conflicts | Open/resolved conflicts with competing artifacts |
-| Certification | Certification queue, submission status, gate effects |
-| Reviews | Plan/architecture/direction reviews with auto-approval, digest generation |
-| Settings | Provider mode, model, concurrency, retry budget, certification config |
-| Skills | Skill packs and worker templates with version/deprecation status |
-| Loop History | Past cycles with phases and tracks |
-
-All panels consume generated TypeScript types from the OpenAPI spec — no handwritten DTOs.
+Role-specific policy lets you use different models or providers for different parts of the cycle: planner, implementer, reviewer, formalizer, and related roles. Concurrency limits, retry budgets, and certification routing are policy concerns, not hard-coded assumptions.
 
 ---
 
-## CLI REPL
+## Dashboard and CLI
 
-```bash
-make cli
-```
+SIEGE includes both an interactive dashboard and a CLI REPL.
 
-```
-siege> Build a REST API for user management
-  [objective created: obj-01a...]
-  [loop created, cycle starting]
+The dashboard surfaces the orchestration loop through dedicated views for planning, tasks, branches, conflicts, certification, reviews, skills, settings, and loop history. The CLI gives you a direct operational surface for creating objectives, inspecting gate status, tailing events, and checking task progress.
 
-siege> /status
-  Cycle: plan_elaboration (gate: 7/9 conditions met)
-
-siege> /gate
-  [x] objective summarized
-  [x] architecture drafted
-  [x] milestones created
-  [ ] acceptance criteria
-  [ ] risks identified
-  ...
-
-siege> /tasks
-  ID          Node        Role          Status
-  task-a1..   Design      planner       succeeded
-  task-b2..   Implement   implementer   running
-  task-c3..   Test        reviewer      queued
-
-siege> /tail
-  [SSE streaming: events appear in real time]
-```
+The API and CLI expose event-streaming surfaces, and the web UI provides a live operational view of the system as cycles advance.
 
 ---
 
-## Policy system
+## Why this engine looks different
 
-Control everything from the API or dashboard:
+SIEGE was not designed as a minimal chat wrapper around a task queue.
+
+It comes from a broader line of work concerned with large-scale decomposition, structured reasoning, formalization pathways, and robustness-aware execution. That research origin is why the engine treats planning, policy, review, conflict handling, and formal assurance as first-class runtime concerns rather than optional extras layered on after the fact.
+
+You do not need the broader research context to use SIEGE as an orchestration engine. But that context explains why the engine is unusually opinionated about gates, traceability, and execution discipline.
+
+---
+
+## Core capabilities
+
+### Gated planning
+
+SIEGE blocks implementation until plan readiness is explicit and machine-checkable. The gate is part of the runtime, not a prompt convention.
+
+### Dependency-aware decomposition
+
+Tasks are organized as an ordered graph rather than a flat queue. That matters when different agents operate concurrently on related milestones.
+
+### Isolated worktree execution
+
+Each task can run in its own git worktree, reducing branch contention and making integration safer.
+
+### Policy-driven orchestration
+
+Provider choice, retry behavior, concurrency ceilings, and certification routing are controlled through explicit policy rather than buried in code paths.
+
+### Conflict and review surfaces
+
+Parallel systems fail in predictable ways. SIEGE promotes conflicts, reviews, and branch state into first-class entities instead of hiding them behind logs.
+
+### Formal assurance and certification
+
+SIEGE integrates with the Formal Claim engine (OAE) to route correctness-critical outputs through actual formal verification. This is not a placeholder: the certification pipeline has been tested end-to-end with real CLI invocations.
+
+The engine supports a **hybrid certification model**:
+
+- **Per-task certification** runs during execution. Nodes flagged `certification_required` are verified immediately when their task succeeds. Integration is blocked until per-task certification passes.
+- **Post-integration certification** runs after merge. System-level claims that only become verifiable after integration (cross-module invariants, integration properties) are swept in a second pass.
+
+Certification behavior is fully policy-driven:
 
 ```json
 {
-  "global": {
-    "default_provider_mode": "api",
-    "max_active_agents": 4,
-    "default_retry_budget": 3,
-    "certification_routing": "critical_only"
-  },
-  "planner":     { "model_name": "claude-sonnet-4-20250514" },
-  "implementer": { "model_name": "claude-sonnet-4-20250514" },
-  "reviewer":    { "model_name": "gpt-4o" },
+  "enabled": true,
+  "frequency": "critical_only",
+  "routing": "local",
+  "grace_period_seconds": 10,
+  "certification_timeout_seconds": 120,
   "formalizer_a": { "enabled": true, "mode": "required" },
   "formalizer_b": { "enabled": true, "mode": "optional" }
 }
 ```
 
-Different models for different roles. Dual formalization for safety-critical claims. Per-task overrides.
+- `frequency: always` certifies every succeeded task. `critical_only` limits to contract/invariant/proof keywords and `certification_required` nodes. `on_request` requires explicit submission. `off` disables entirely.
+- Dual formalization runs two independent verification passes and flags divergence.
+- Connect the Formal Claim CLI via `FORMAL_CLAIM_CLI_PATH` environment variable or the HTTP gateway via `FORMAL_CLAIM_ENDPOINT`.
 
----
+### Iterative learning
 
-## Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Control plane | Rust 1.86+, axum 0.8, tokio |
-| State store | PostgreSQL 16 (97 tables, 18 migrations) |
-| Frontend | React 18, TypeScript 5.8, Vite 6, TanStack Query, Zustand |
-| Desktop | Tauri 2 |
-| API docs | OpenAPI via utoipa (68/70 routes documented) |
-| Type safety | Generated TS types from OpenAPI spec, enum parity checks |
+The engine records failures and outcomes so later cycles can decompose or retry with more context instead of starting from zero every time.
 
 ---
 
 ## Architecture
 
-```
+```text
 apps/
-  web/          React dashboard (12 panels)
+  web/          Dashboard
   desktop/      Tauri shell
   cli/          Interactive REPL
 
 services/
-  orchestration-api/    84 HTTP routes + SSE streaming + Swagger UI
-  loop-runner/          Cycle state machine (19 tick functions)
-  worker-dispatch/      Adapter invocation + worktree isolation
+  orchestration-api/    HTTP API, event surfaces, Swagger UI
+  loop-runner/          Cycle state machine
+  worker-dispatch/      Task execution and worktree dispatch
 
 packages/
-  state-model           Core types (objectives, plans, nodes, tasks, cycles)
-  control-plane         Command types + executor (11 commands)
-  planning-engine       Plan gate, validation, pipeline traits
-  agent-adapters        7 adapters + spawn runtime + normalization
-  integration           Formal-claim gateway (CLI + HTTP) + certification pipeline
-  conflict-system       5 conflict classes + auto-resolution
-  review-governance     4 review templates + scheduling + digest
-  skill-registry        Skill packs + 8-level resolution + version pinning
-  conversation-engine   Chat extraction + plan update pipeline
-  worker-protocol       Protocol envelopes + peer messaging
-  user-policy           Execution policy + formalizer config
-  roadmap-model         Roadmap nodes + ordering + absorption
-  observability         Metrics + sidecars + heartbeats
-  recursive-improvement Self-improvement + scoring + safety gates
-  deployment            Modes + routing + preflight
-  formal-readiness      Predicates + export + Lean/Isabelle prep
-  scaling               Event bus + worktree pools + tier config
+  planning-engine       Plan gate and planning validation
+  control-plane         Command shapes and orchestration boundaries
+  agent-adapters        Provider adapters and runtime normalization
+  conversation-engine   Chat extraction and plan update pipeline
+  skill-registry        Skill resolution and versioned packs
+  review-governance     Review templates, scheduling, digests
+  conflict-system       Conflict entities and routing
+  integration           Integration and certification seams
+  formal-readiness      Readiness predicates and export surfaces
+  recursive-improvement Failure memory, scoring, safety checks
   git-control           Worktree lifecycle
-  robustness-policy     Parse recovery + context budgets + overlap detection
-  ui-models             Canonical projection types (CD-04)
+  user-policy           Runtime execution policy
+  state-model           Core orchestration types
+  ui-models             Canonical read-model types
+  scaling               Event-bus and deployment scaling seams
+  observability         Metrics, heartbeats, retention policies
+  roadmap-model         Planning and roadmap structures
+  robustness-policy     Context budgets, overlap checks, parse recovery
+  deployment            Modes, routing, preflight
+  worker-protocol       Worker envelopes and messaging
 ```
 
 ---
 
-## Numbers
+## Where SIEGE fits
 
-- **84** API routes, **68** with OpenAPI annotations
-- **97** SQL tables, **48** enum CHECK constraints
-- **109** tests
-- **20** Rust packages + **3** services + **3** apps
-- **18** database migrations
-- **12** dashboard panels
-- **7** LLM adapters
-- **9**-condition planning gate
-- **5** conflict detection classes
-- **4** review templates with auto-approval
-- **3** scaling tiers (standalone / clustered / distributed)
+If you want a lightweight single-agent coding tool, SIEGE is overkill.
+
+If you want an engine that can coordinate planning, controlled parallel execution, isolation, review, conflict handling, and optional assurance flows under one roof, that is the category SIEGE is targeting.
+
+It is best thought of as a **general orchestration engine with research-grade execution discipline**.
 
 ---
 
 ## License
 
 Proprietary.
-
-
-## Current status
-Prototype. Full release 3/29
