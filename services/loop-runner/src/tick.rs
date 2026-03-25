@@ -3428,6 +3428,10 @@ async fn process_certification_queue(pool: &PgPool) -> Result<u32, Box<dyn std::
     };
 
     let mut gateway = integration::FormalClaimGateway::new(data_dir);
+    // Allow overriding the CLI binary path via env var
+    if let Ok(cli_path) = std::env::var("FORMAL_CLAIM_CLI_PATH") {
+        gateway.cli_path = cli_path;
+    }
     // For remote mode, set the CLI to use remote endpoint
     if routing == "remote" {
         if let Ok(remote_url) = std::env::var("FORMAL_CLAIM_REMOTE_URL") {

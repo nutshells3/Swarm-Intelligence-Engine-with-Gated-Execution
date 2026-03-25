@@ -153,7 +153,7 @@ ALTER TABLE certification_submissions ADD CONSTRAINT chk_certification_submissio
     CHECK (queue_status IN (
         'pending','submitted','acknowledged','completed',
         'transport_error','invalidated',
-        'error','processing','timed_out','diverged','blocked'
+        'error','processing','timed_out','diverged','blocked','failed'
     ));
 
 ------------------------------------------------------------------------
