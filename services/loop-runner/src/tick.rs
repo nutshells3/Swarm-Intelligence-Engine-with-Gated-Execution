@@ -202,16 +202,26 @@ pub async fn tick(pool: &PgPool, scaling: &ScalingContext) -> Result<u32, Box<dy
     // Phase 7: dispatch -> mark tasks as queued/running, advance to execution
     actions += dispatch_phase(pool).await?;
 
-    // Phase 8: execution -> check if all tasks are done
+    // Phase 8a: per-task certification (hybrid pre-integration gate)
+    // certification_required nodes get verified immediately on task success,
+    // BEFORE integration. This catches simple claims (function correctness,
+    // type safety) early without waiting for the full merge.
+    actions += select_certification_candidates(pool).await?;
+    actions += process_certification_queue(pool).await?;
+
+    // Phase 8b: execution -> check if all tasks are done
+    // Now also checks that certification_required nodes have passed certification
+    // before allowing transition to integration.
     actions += check_execution_completion(pool).await?;
 
     // Phase 9: integration -> advance to state_update -> next_cycle_ready
     actions += complete_integration(pool).await?;
 
-    // Phase 10: certification selection sweep
+    // Phase 10: post-integration certification sweep
+    // System-level claims (cross-module invariants, integration properties)
+    // are verified after merge. This is a second pass for any newly eligible
+    // candidates that only become certifiable after integration.
     actions += select_certification_candidates(pool).await?;
-
-    // Phase 11: process certification queue (call formal-claim CLI)
     actions += process_certification_queue(pool).await?;
 
     // Phase 12: next_cycle_ready -> optionally create next cycle
@@ -1513,6 +1523,36 @@ async fn check_execution_completion(
         .bind(&objective_id)
         .fetch_one(pool)
         .await?;
+
+        // Hybrid certification gate: count certification_required nodes
+        // whose tasks succeeded but certification hasn't passed yet.
+        // These block the transition to integration.
+        let pending_cert: Option<i64> = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM tasks t
+             JOIN nodes n ON n.node_id = t.node_id
+             WHERE n.objective_id = $1
+               AND COALESCE(n.certification_required, false) = true
+               AND t.status = 'succeeded'
+               AND NOT EXISTS (
+                   SELECT 1 FROM certification_candidates cc
+                   JOIN certification_submissions cs ON cs.candidate_id = cc.candidate_id
+                   WHERE cc.task_id = t.task_id
+                     AND cs.queue_status IN ('completed', 'acknowledged')
+               )",
+        )
+        .bind(&objective_id)
+        .fetch_one(pool)
+        .await?;
+
+        if pending_cert.unwrap_or(0) > 0 {
+            tracing::info!(
+                cycle_id = %cycle_id,
+                objective_id = %objective_id,
+                pending_certifications = pending_cert.unwrap_or(0),
+                "Execution complete but waiting for per-task certification before integration"
+            );
+            continue;
+        }
 
         // Also check that at least one task exists (avoid advancing on empty)
         let total_count: Option<i64> = sqlx::query_scalar(
