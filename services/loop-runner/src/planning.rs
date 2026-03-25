@@ -518,6 +518,18 @@ pub async fn elaborate_plan(
     _cycle_id: &str,
     objective_id: &str,
 ) -> Result<bool, Box<dyn std::error::Error>> {
+    // Policy: unresolved question budget (default 3, overridable via user_policies)
+    let policy_question_budget: i32 = sqlx::query(
+        "SELECT policy_payload FROM user_policies ORDER BY revision DESC LIMIT 1",
+    )
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten()
+    .and_then(|r| r.try_get::<serde_json::Value, _>("policy_payload").ok())
+    .and_then(|v| v.pointer("/global/unresolved_question_budget")?.as_i64())
+    .unwrap_or(3) as i32;
+
     // 1. Get objective summary
     let obj_row = sqlx::query(
         "SELECT summary, architecture_summary FROM objectives WHERE objective_id = $1",
@@ -597,11 +609,12 @@ pub async fn elaborate_plan(
 
             sqlx::query(
                 "INSERT INTO plan_gates (gate_id, plan_id, condition_entries, current_status, unresolved_question_budget, unresolved_question_count, evaluated_at)
-                 VALUES ($1, $2, $3, 'open', 3, 0, now())",
+                 VALUES ($1, $2, $3, 'open', $4, 0, now())",
             )
             .bind(&gate_id)
             .bind(&plan_id)
             .bind(&default_conditions)
+            .bind(policy_question_budget)
             .execute(pool)
             .await?;
 
@@ -804,7 +817,7 @@ pub async fn elaborate_plan(
         plan_id: plan_id.clone(),
         condition_entries: condition_entries.clone(),
         current_status: GateStatus::Open, // tentative; we derive below
-        unresolved_question_budget: 3,
+        unresolved_question_budget: policy_question_budget,
         unresolved_question_count: unresolved_q_count,
         override_reason: None,
         evaluated_at: chrono::Utc::now(),
