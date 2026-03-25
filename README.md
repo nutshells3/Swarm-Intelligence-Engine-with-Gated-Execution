@@ -224,6 +224,15 @@ Certification behavior is fully policy-driven:
 - Dual formalization runs two independent verification passes and flags divergence.
 - Connect the Formal Claim CLI via `FORMAL_CLAIM_CLI_PATH` environment variable or the HTTP gateway via `FORMAL_CLAIM_ENDPOINT`.
 
+The formal assurance stack is built across several repositories:
+
+| Repository | Role |
+|------------|------|
+| [orchestration-assurance-engine](https://github.com/nutshells3/orchestration-assurance-engine) | Certification engine, CLI, claim trace, audit pipeline |
+| [fwp](https://github.com/nutshells3/fwp) | Formal verification adapters (Lean, Isabelle, Rocq) |
+| [proof-assistant](https://github.com/nutshells3/proof-assistant) | Proof execution engine |
+| [safeslice](https://github.com/nutshells3/safeslice) | Safe decomposition and slicing for verification targets |
+
 ### Iterative learning
 
 The engine records failures and outcomes so later cycles can decompose or retry with more context instead of starting from zero every time.
