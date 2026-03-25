@@ -7,7 +7,7 @@ pub mod pooled_worktree;
 pub mod worker_isolation;
 pub mod worktree_isolation;
 
-pub use config::{ScalingConfig, ScalingTier};
+pub use config::{ScalingConfig, ScalingTier, load_scaling_config};
 pub use event_bus::{Event, EventBus, EventBusError};
 pub use factory::ScalingContext;
 pub use worker_isolation::{IsolationError, WorkerIsolation};

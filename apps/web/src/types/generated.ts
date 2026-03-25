@@ -734,8 +734,11 @@ export interface TaskBoardSummary {
 }
 
 export interface TaskBoardProjection {
-  status: string;
-  count: number;
+  queued: TaskBoardItem[];
+  running: TaskBoardItem[];
+  succeeded: TaskBoardItem[];
+  failed: TaskBoardItem[];
+  summary: TaskBoardSummary;
 }
 
 export interface GraphNode {
@@ -765,8 +768,10 @@ export interface BranchMainlineItem {
 }
 
 export interface BranchMainlineProjection {
-  lane: string;
-  count: number;
+  branch: BranchMainlineItem[];
+  mainline_candidate: BranchMainlineItem[];
+  mainline: BranchMainlineItem[];
+  blocked: BranchMainlineItem[];
 }
 
 export interface ReviewQueueItem {
@@ -776,9 +781,19 @@ export interface ReviewQueueItem {
   lane: string;
 }
 
-export interface ReviewQueueProjection {
+export interface PendingReviewItem {
+  review_id: string;
+  review_kind: string;
+  target_ref: string;
   status: string;
-  count: number;
+  recorded_at: string;
+}
+
+export interface ReviewQueueProjection {
+  items: ReviewQueueItem[];
+  pending_reviews: PendingReviewItem[];
+  pending_count: number;
+  review_artifact_count: number;
 }
 
 export interface CertificationQueueItem {
@@ -789,8 +804,8 @@ export interface CertificationQueueItem {
 }
 
 export interface CertificationQueueProjection {
-  queue_status: string;
-  count: number;
+  items: CertificationQueueItem[];
+  pending_count: number;
 }
 
 export interface ObjectiveProgressItem {

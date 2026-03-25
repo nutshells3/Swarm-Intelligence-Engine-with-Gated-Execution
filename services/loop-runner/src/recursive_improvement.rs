@@ -264,7 +264,7 @@ pub async fn compute_improvement_score(
 
     // Pending reviews and certifications
     let pending_reviews: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM review_artifacts WHERE target_ref = $1 AND status = 'pending'",
+        "SELECT COUNT(*) FROM review_artifacts WHERE target_ref = $1 AND status = 'scheduled'",
     )
     .bind(objective_id)
     .fetch_one(pool)
@@ -1245,4 +1245,72 @@ pub async fn write_extended_memory(
     }
 
     Ok(created)
+}
+
+// ── REC-010 (extended): Cross-cycle learning reinjection ────────────────
+
+/// Retrieve lessons from completed cycles that have not yet been consumed
+/// by the current cycle.  This closes the cross-cycle boundary gap:
+/// memory entries written by a finished cycle are distilled into
+/// reinjection records that the next cycle reads on startup.
+///
+/// Returns the lesson summaries.  The caller is responsible for injecting
+/// these into the next cycle's context window.
+pub async fn retrieve_reinjectable_lessons(
+    pool: &PgPool,
+    objective_id: &str,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    // Fetch unconsumed memory entries from previous cycles for this objective.
+    // "Unconsumed" means no reinjection event has been emitted for this entry+objective pair.
+    let rows = sqlx::query(
+        "SELECT rme.entry_id, rme.learned_summary, rme.outcome
+         FROM recursive_memory_entries rme
+         WHERE rme.objective_id = $1
+           AND NOT EXISTS (
+               SELECT 1 FROM event_journal ej
+               WHERE ej.aggregate_kind = 'recursive_improvement'
+                 AND ej.idempotency_key = 'reinject-' || rme.entry_id
+           )
+         ORDER BY rme.recorded_at ASC
+         LIMIT 20",
+    )
+    .bind(objective_id)
+    .fetch_all(pool)
+    .await?;
+
+    let mut lessons = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let entry_id: String = row.try_get("entry_id").unwrap_or_default();
+        let summary: String = row.try_get("learned_summary").unwrap_or_default();
+        let outcome: String = row.try_get("outcome").unwrap_or_default();
+        lessons.push(format!("[{}] {}", outcome, summary));
+
+        // Mark this lesson as consumed by recording a reinjection event.
+        sqlx::query(
+            "INSERT INTO event_journal
+             (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at)
+             VALUES ($1, 'recursive_improvement', $2, 'learning_reinjected', $3, $4::jsonb, now())
+             ON CONFLICT (aggregate_kind, aggregate_id, idempotency_key) DO NOTHING",
+        )
+        .bind(Uuid::now_v7().to_string())
+        .bind(&entry_id)
+        .bind(format!("reinject-{}", entry_id))
+        .bind(serde_json::json!({
+            "entry_id": entry_id,
+            "objective_id": objective_id,
+            "outcome": outcome,
+        }))
+        .execute(pool)
+        .await?;
+    }
+
+    if !lessons.is_empty() {
+        tracing::info!(
+            objective_id,
+            lesson_count = lessons.len(),
+            "REC-010: Retrieved cross-cycle learning reinjections"
+        );
+    }
+
+    Ok(lessons)
 }

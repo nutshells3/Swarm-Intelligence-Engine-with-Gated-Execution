@@ -111,10 +111,18 @@ impl ScalingConfig {
 
 /// Load scaling config from environment / config file / defaults.
 ///
-/// Priority:
-/// 1. `SIEGE_SCALING_TIER` env var overrides the tier field
+/// Priority (highest wins):
+/// 1. Env vars override individual fields:
+///    - `SIEGE_SCALING_TIER` -- tier
+///    - `NATS_URL` -- NATS connection URL
+///    - `DB_POOL_SIZE` -- max database connections
 /// 2. `siege.toml` `[scaling]` section if the file exists
 /// 3. `ScalingConfig::default()` (standalone)
+///
+/// SCL-007: All three env vars are consistent with `load_from_env()`.
+/// The tier override was already present; NATS_URL and DB_POOL_SIZE
+/// are now applied here too so the two loading paths produce
+/// equivalent results when the same env vars are set.
 pub fn load_scaling_config() -> ScalingConfig {
     // Start with file-based config or default
     let mut config = match std::fs::read_to_string("siege.toml") {
@@ -146,6 +154,24 @@ pub fn load_scaling_config() -> ScalingConfig {
                     tier = other,
                     "Unknown SIEGE_SCALING_TIER value, keeping config file value"
                 );
+            }
+        }
+    }
+
+    // Env var override for NATS URL (consistent with load_from_env)
+    if let Ok(url) = std::env::var("NATS_URL") {
+        config.nats_url = url;
+    }
+
+    // Env var override for DB pool size (consistent with load_from_env)
+    if let Ok(pool_str) = std::env::var("DB_POOL_SIZE") {
+        match pool_str.parse::<u32>() {
+            Ok(size) if size > 0 => config.max_db_connections = size,
+            Ok(_) => {
+                tracing::warn!("DB_POOL_SIZE must be > 0, keeping config file value");
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "Invalid DB_POOL_SIZE, keeping config file value");
             }
         }
     }

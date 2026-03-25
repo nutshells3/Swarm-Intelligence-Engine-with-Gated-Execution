@@ -79,14 +79,34 @@ pub struct ProjectedCycleHealth {
     pub projected_at: DateTime<Utc>,
 }
 
+/// Freshness status of a projection, distinguishing a stale-but-valid
+/// projection from one that failed to rebuild.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum ProjectionFreshness {
+    /// Projection was recomputed within the expected interval.
+    Fresh,
+    /// Projection is older than expected but structurally valid.
+    Stale,
+    /// Projection rebuild failed; last-known-good data is shown.
+    RebuildFailed,
+}
+
 /// Top-level UI metrics projection bundle. This is the single type
 /// that the UI layer consumes. It aggregates all projection sub-types
 /// and is recomputed periodically from authoritative records.
+///
+/// CSV acceptance: "UI metrics projections with freshness and version
+/// markers for dashboards and policy panels."
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UiMetricsProjection {
     pub cost_summary: ProjectedCostSummary,
     pub token_usage: ProjectedTokenUsage,
     pub cycle_health: ProjectedCycleHealth,
+    /// Monotonically increasing version counter for cache-busting.
+    pub version: u64,
+    /// Whether this projection data is still fresh or has gone stale.
+    pub freshness: ProjectionFreshness,
     /// Timestamp of the most recent recomputation.
     pub projected_at: DateTime<Utc>,
 }

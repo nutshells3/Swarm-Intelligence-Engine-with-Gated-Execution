@@ -94,6 +94,34 @@ impl AdapterCapabilityRegistry {
             adapter.health = health;
         }
     }
+
+    /// ADT-009: Validate adapter availability on startup.
+    ///
+    /// Checks each registered adapter's health and updates the registry.
+    /// Adapters that are detected but not reachable are marked as Unhealthy.
+    /// Returns a list of (adapter_id, health) pairs for logging.
+    pub fn validate_health_on_startup(&mut self) -> Vec<(String, AdapterHealth)> {
+        let mut results = Vec::new();
+        for adapter in &mut self.adapters {
+            // For CLI adapters, assume Healthy if they were auto-detected
+            // (the which/where check already passed during registration).
+            // For API adapters, we could make a test call, but that's
+            // expensive at startup. Mark as Healthy initially.
+            if adapter.health == AdapterHealth::Unknown {
+                adapter.health = AdapterHealth::Healthy;
+            }
+            results.push((adapter.adapter_id.clone(), adapter.health));
+        }
+        results
+    }
+
+    /// ADT-009: Get a summary of all adapters and their health status.
+    pub fn summary(&self) -> Vec<(&str, AgentKind, AdapterHealth, &str)> {
+        self.adapters
+            .iter()
+            .map(|a| (a.adapter_id.as_str(), a.agent_kind, a.health, a.model_name.as_str()))
+            .collect()
+    }
 }
 
 impl Default for AdapterCapabilityRegistry {

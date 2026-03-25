@@ -90,15 +90,20 @@ impl ClaudeCliAdapter {
         request: &AdapterRequest,
         timeout: Duration,
     ) -> Result<(String, String, Option<i32>), String> {
-        let result = tokio::time::timeout(
-            timeout,
-            Command::new(&self.cli_path)
-                .args(["--print", "--output-format", "json", &request.prompt])
-                .current_dir(&request.working_directory)
-                .env("CLAUDE_NO_INTERACTIVE", "1")
-                .output(),
-        )
-        .await;
+        // On Windows, CLI tools may be .cmd/.ps1 scripts that need cmd.exe.
+        let mut cmd = if cfg!(windows) {
+            let mut c = Command::new("cmd");
+            c.args(["/C", &self.cli_path, "--print", "--output-format", "json", &request.prompt]);
+            c
+        } else {
+            let mut c = Command::new(&self.cli_path);
+            c.args(["--print", "--output-format", "json", &request.prompt]);
+            c
+        };
+        cmd.current_dir(&request.working_directory)
+            .env("CLAUDE_NO_INTERACTIVE", "1");
+
+        let result = tokio::time::timeout(timeout, cmd.output()).await;
 
         match result {
             Ok(Ok(output)) => {
@@ -154,6 +159,37 @@ impl AgentAdapter for ClaudeCliAdapter {
                 Ok((stdout, stderr, code)) => {
                     stdout_raw = stdout;
                     stderr_raw = stderr;
+
+                    // ADT-007: Check for is_error in JSON response.
+                    // Claude CLI returns exit code 0 even when credit is low
+                    // or other errors occur, but sets is_error: true in JSON.
+                    let json_is_error = serde_json::from_str::<serde_json::Value>(&stdout_raw)
+                        .ok()
+                        .and_then(|v| v.get("is_error")?.as_bool())
+                        .unwrap_or(false);
+
+                    if json_is_error {
+                        // Extract error message from result field for explicit surfacing
+                        let error_detail = serde_json::from_str::<serde_json::Value>(&stdout_raw)
+                            .ok()
+                            .and_then(|v| {
+                                v.get("result")
+                                    .and_then(|r| r.as_str())
+                                    .map(|s| s.to_string())
+                            })
+                            .unwrap_or_else(|| "unknown error (is_error=true)".to_string());
+                        tracing::error!(
+                            adapter = "claude-cli",
+                            task_id = %task_id,
+                            error_detail = %error_detail,
+                            stderr = %stderr_raw,
+                            "Claude CLI returned is_error=true despite exit code 0"
+                        );
+                        // Surface the error explicitly -- no silent fallback
+                        stderr_raw = format!("{}\nClaude CLI is_error: {}", stderr_raw, error_detail);
+                        status = AdapterStatus::Failed;
+                        break;
+                    }
 
                     let normalized = normalize_output(&stdout_raw, &policy);
                     if normalized.result == NormalizationResult::Empty {

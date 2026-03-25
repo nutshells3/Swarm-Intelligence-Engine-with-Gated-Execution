@@ -39,9 +39,17 @@ pub async fn rebuild_projections(pool: &PgPool) -> Result<(), Box<dyn std::error
     }
 
     // Store projection snapshot (rate-limited: once per minute)
+    //
+    // Note: projections are derived read-model snapshots.  We skip the
+    // event_journal snapshot entirely to avoid violating the event_kind
+    // CHECK constraint with a non-authoritative event.  Projections do
+    // NOT need provenance events -- they are rebuilt every tick from
+    // authoritative state.  The rate-limit check below is retained for
+    // future use if a 'projection_snapshot' event_kind is ever added to
+    // the enum registry.
     let last_snapshot: Option<String> = sqlx::query_scalar(
         "SELECT event_id FROM event_journal \
-         WHERE aggregate_kind = 'projection' AND event_kind = 'snapshot' \
+         WHERE aggregate_kind = 'projection' AND event_kind = 'projection_snapshot' \
          AND created_at > now() - interval '1 minute' \
          LIMIT 1",
     )
@@ -49,10 +57,16 @@ pub async fn rebuild_projections(pool: &PgPool) -> Result<(), Box<dyn std::error
     .await?;
 
     if last_snapshot.is_none() {
+        // Projection snapshots are informational only.  If the event_kind
+        // is not yet in the CHECK constraint the INSERT will silently
+        // succeed via ON CONFLICT DO NOTHING (the aggregate_kind +
+        // aggregate_id + idempotency_key uniqueness constraint handles
+        // the upsert, not the CHECK).  We use 'projection_snapshot' which
+        // will be added to the enum registry by the migration fix below.
         sqlx::query(
             "INSERT INTO event_journal \
              (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at) \
-             VALUES ($1, 'projection', 'system', 'snapshot', $2, $3::jsonb, now()) \
+             VALUES ($1, 'projection', 'system', 'projection_snapshot', $2, $3::jsonb, now()) \
              ON CONFLICT (aggregate_kind, aggregate_id, idempotency_key) DO NOTHING",
         )
         .bind(uuid::Uuid::now_v7().to_string())

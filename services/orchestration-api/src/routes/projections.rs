@@ -634,12 +634,12 @@ pub async fn review_queue(
         });
     }
 
-    // REV-015: Also include pending review artifacts from review_artifacts table.
+    // REV-015: Also include scheduled/in-progress review artifacts from review_artifacts table.
     // Build canonical CanonicalReviewQueueItem first, then convert to API type.
     let review_rows = sqlx::query(
         r#"SELECT review_id, review_kind, target_ref, status, recorded_at
            FROM review_artifacts
-           WHERE status IN ('pending', 'scheduled', 'in_progress')
+           WHERE status IN ('scheduled', 'in_progress')
            ORDER BY recorded_at ASC
            LIMIT 200"#,
     )

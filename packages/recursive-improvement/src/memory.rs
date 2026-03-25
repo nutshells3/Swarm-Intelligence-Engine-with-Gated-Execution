@@ -66,10 +66,28 @@ pub struct ReuseSignal {
     pub confidence: String,
 }
 
+/// A learning reinjection record: distilled lessons from a completed cycle
+/// that should be fed into the next cycle's context window.  This enables
+/// cross-cycle boundary learning without overriding current objectives.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LearningReinjection {
+    /// The memory entry this reinjection derives from.
+    pub source_entry_id: String,
+    /// The target cycle or objective to reinject into.
+    pub target_objective_id: String,
+    /// Distilled lesson text (must be concise -- not full history replay).
+    pub lesson: String,
+    /// Whether this reinjection has been consumed by the target cycle.
+    pub consumed: bool,
+    /// When this reinjection was created.
+    pub created_at: DateTime<Utc>,
+}
+
 /// REC-010 -- Recursive memory.
 ///
 /// Append-only memory store for recursive improvement loops.  Records
-/// prior objectives, outcomes, supersession chains, and reuse signals.
+/// prior objectives, outcomes, supersession chains, reuse signals, and
+/// cross-cycle learning reinjections.
 /// Must not override or corrupt current objectives (CSV caution).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RecursiveMemory {
@@ -81,6 +99,8 @@ pub struct RecursiveMemory {
     pub supersession_chains: Vec<SupersessionChain>,
     /// Active reuse signals for current objectives.
     pub reuse_signals: Vec<ReuseSignal>,
+    /// Cross-cycle learning reinjections for feeding lessons into new cycles.
+    pub reinjections: Vec<LearningReinjection>,
     /// Whether this memory store is append-only (always true -- CSV constraint).
     pub append_only: bool,
     /// When the memory was last updated.

@@ -8,14 +8,15 @@ import type { ReviewResponse } from '../types/generated';
 // (packages/review-governance/src/artifacts.rs). The generated TS
 // types are in apps/web/src/types/generated.ts::ReviewResponse.
 
-type ReviewFilter = 'all' | 'plan_review' | 'architecture_review' | 'direction_review' | 'milestone_review';
+type ReviewFilter = 'all' | 'planning' | 'architecture' | 'direction' | 'milestone' | 'implementation';
 
 const REVIEW_FILTERS: { key: ReviewFilter; label: string }[] = [
   { key: 'all', label: 'All Reviews' },
-  { key: 'plan_review', label: 'Planning' },
-  { key: 'architecture_review', label: 'Architecture' },
-  { key: 'direction_review', label: 'Dev Direction' },
-  { key: 'milestone_review', label: 'Milestone' },
+  { key: 'planning', label: 'Planning' },
+  { key: 'architecture', label: 'Architecture' },
+  { key: 'direction', label: 'Dev Direction' },
+  { key: 'milestone', label: 'Milestone' },
+  { key: 'implementation', label: 'Implementation' },
 ];
 
 // ---- Helpers ----
@@ -37,15 +38,12 @@ function formatConditions(conditions: unknown): string {
 function statusColor(status: string): string {
   switch (status) {
     case 'approved':
-    case 'completed':
+    case 'integrated':
       return '#22c55e';
-    case 'rejected':
     case 'changes_requested':
       return '#ef4444';
-    case 'pending':
     case 'scheduled':
       return '#eab308';
-    case 'in_review':
     case 'in_progress':
     case 'submitted':
       return '#3b82f6';
@@ -113,7 +111,7 @@ function ReviewTable({
               </td>
               <td>{new Date(r.recorded_at).toLocaleString()}</td>
               <td>
-                {r.status !== 'approved' && r.status !== 'rejected' && (
+                {r.status !== 'approved' && r.status !== 'superseded' && r.status !== 'cancelled' && r.status !== 'integrated' && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

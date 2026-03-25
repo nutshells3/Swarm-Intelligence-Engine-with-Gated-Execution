@@ -7,6 +7,12 @@ const LANE_META: Record<string, { label: string; color: string }> = {
   mainline_candidate: { label: 'Mainline Candidate', color: '#38bdf8' },
   mainline: { label: 'Mainline', color: '#22c55e' },
   blocked: { label: 'Blocked', color: '#ef4444' },
+  archived: { label: 'Archived', color: '#6b7280' },
+  integration: { label: 'Integration', color: '#f59e0b' },
+  implementation: { label: 'Implementation', color: '#8b5cf6' },
+  planning: { label: 'Planning', color: '#06b6d4' },
+  review: { label: 'Review', color: '#eab308' },
+  verification: { label: 'Verification', color: '#14b8a6' },
 };
 
 function LaneGroup({ laneKey, items }: { laneKey: string; items: BranchMainlineItem[] }) {

@@ -283,6 +283,10 @@ impl SkillRegistryLoader {
     }
 
     /// Full resolution with an optional explicit task ID for per-task overrides.
+    ///
+    /// SKL-013: Deprecated packs are excluded from levels 2-4 (task-kind,
+    /// role, fallback). They can still be selected via explicit per-task
+    /// overrides (level 1) to support migration scenarios.
     pub fn resolve_skill_with_task_id(
         task_id: Option<&str>,
         task_kind: &str,
@@ -290,7 +294,7 @@ impl SkillRegistryLoader {
         overrides: &[SkillOverride],
         available: &[SkillPackManifest],
     ) -> Option<SkillResolution> {
-        // 1. Explicit per-task override
+        // 1. Explicit per-task override (allows deprecated packs)
         if let Some(tid) = task_id {
             for ov in overrides {
                 if ov.task_id.as_deref() == Some(tid) {
@@ -308,11 +312,14 @@ impl SkillRegistryLoader {
             }
         }
 
+        // SKL-013: For levels 2-4, exclude deprecated packs.
+        let active: Vec<&SkillPackManifest> = available.iter().filter(|sp| !sp.deprecated).collect();
+
         // 2. Task-kind mapping: first check overrides keyed by task_kind,
         //    then check skill packs that accept this task kind.
         for ov in overrides {
             if ov.task_id.is_none() && ov.task_kind.as_deref() == Some(task_kind) {
-                if available.iter().any(|sp| sp.skill_pack_id == ov.skill_pack_id) {
+                if active.iter().any(|sp| sp.skill_pack_id == ov.skill_pack_id) {
                     return Some(SkillResolution {
                         skill_pack_id: ov.skill_pack_id.clone(),
                         selection_reason: format!(
@@ -325,8 +332,8 @@ impl SkillRegistryLoader {
             }
         }
 
-        // Task-kind mapping from available skill packs
-        for sp in available {
+        // Task-kind mapping from active (non-deprecated) skill packs
+        for sp in &active {
             if sp.accepted_task_kinds.iter().any(|k| k == task_kind) {
                 return Some(SkillResolution {
                     skill_pack_id: sp.skill_pack_id.clone(),
@@ -339,8 +346,8 @@ impl SkillRegistryLoader {
             }
         }
 
-        // 3. Role default: match by worker_role
-        for sp in available {
+        // 3. Role default: match by worker_role (active packs only)
+        for sp in &active {
             if sp.worker_role == worker_role {
                 return Some(SkillResolution {
                     skill_pack_id: sp.skill_pack_id.clone(),
@@ -353,8 +360,8 @@ impl SkillRegistryLoader {
             }
         }
 
-        // 4. Global fallback: first available skill pack
-        available.first().map(|sp| SkillResolution {
+        // 4. Global fallback: first active (non-deprecated) skill pack
+        active.first().map(|sp| SkillResolution {
             skill_pack_id: sp.skill_pack_id.clone(),
             selection_reason: "global fallback (first available skill pack)".to_string(),
             selection_level: "fallback".to_string(),

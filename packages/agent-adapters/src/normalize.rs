@@ -16,6 +16,16 @@ use std::sync::LazyLock;
 static ANSI_ESCAPE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\x1b\[[0-9;]*[a-zA-Z]").expect("ANSI regex is valid"));
 
+/// Pre-compiled regex for codex exec metadata lines.
+/// Matches lines like "model: ...", "provider: ...", "session id: ...",
+/// "tokens used: ..." and the section separator lines.
+static CODEX_METADATA_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?m)^(model:\s.*|provider:\s.*|session id:\s.*|tokens used:\s.*|duration:\s.*|─+\s*$)"
+    )
+    .expect("codex metadata regex is valid")
+});
+
 /// Result of normalizing an adapter output.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -150,4 +160,81 @@ pub fn normalize_output(raw: &str, policy: &NormalizationPolicy) -> NormalizedOu
         final_length,
         has_content,
     }
+}
+
+/// ADT-010: Extract the actual response content from codex exec's multi-section output.
+///
+/// Codex exec outputs structured text with sections like:
+/// ```text
+/// ──────────────────────────────
+/// codex
+/// <actual response content here>
+/// ──────────────────────────────
+/// model: gpt-5.4
+/// provider: openai
+/// session id: ...
+/// tokens used: ...
+/// duration: ...
+/// ```
+///
+/// This function strips the metadata lines and section separators,
+/// extracting only the actual response content.
+pub fn extract_codex_exec_content(raw: &str) -> String {
+    // Strategy: find the content between the first "codex" header and the
+    // metadata block that follows.
+    let lines: Vec<&str> = raw.lines().collect();
+
+    // Find the "codex" section header (case-insensitive)
+    let header_idx = lines
+        .iter()
+        .position(|l| l.trim().eq_ignore_ascii_case("codex"));
+
+    if let Some(start) = header_idx {
+        // Content starts after the "codex" header line
+        let content_start = start + 1;
+
+        // Find where metadata begins: look for "tokens used:" or "model:" lines
+        let metadata_start = lines[content_start..]
+            .iter()
+            .position(|l| {
+                let trimmed = l.trim();
+                trimmed.starts_with("tokens used:")
+                    || trimmed.starts_with("model:")
+                    || trimmed.starts_with("provider:")
+                    || trimmed.starts_with("session id:")
+                    || trimmed.starts_with("duration:")
+            })
+            .map(|idx| content_start + idx)
+            .unwrap_or(lines.len());
+
+        // Also look backwards from metadata_start to skip any trailing separator lines
+        let mut content_end = metadata_start;
+        while content_end > content_start
+            && lines[content_end - 1]
+                .trim()
+                .chars()
+                .all(|c| c == '─' || c == '-' || c.is_whitespace())
+            && !lines[content_end - 1].trim().is_empty()
+        {
+            content_end -= 1;
+        }
+
+        // Extract the content lines, skipping any leading separator
+        let content_lines: Vec<&str> = lines[content_start..content_end]
+            .iter()
+            .copied()
+            .skip_while(|l| {
+                l.trim()
+                    .chars()
+                    .all(|c| c == '─' || c == '-' || c.is_whitespace())
+                    && !l.trim().is_empty()
+            })
+            .collect();
+
+        return content_lines.join("\n");
+    }
+
+    // If no "codex" header found, strip metadata lines as a fallback
+    let stripped = CODEX_METADATA_RE.replace_all(raw, "");
+    stripped.trim().to_string()
 }

@@ -52,6 +52,19 @@ impl NatsEventBus {
             max_batch_size: 100,
         }
     }
+
+    /// Flush any buffered events to PG. Must be called before the bus is
+    /// dropped or events may be lost. This surfaces errors explicitly
+    /// rather than silently discarding buffered events (playbook rule 2).
+    async fn flush_buffer(&self) -> Result<(), EventBusError> {
+        let mut buffer = self.batch_buffer.lock().await;
+        if !buffer.is_empty() {
+            let batch = std::mem::take(&mut *buffer);
+            drop(buffer);
+            self.pg_fallback.publish_batch(batch).await?;
+        }
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -69,6 +82,10 @@ impl EventBus for NatsEventBus {
 
     async fn publish_batch(&self, events: Vec<Event>) -> Result<(), EventBusError> {
         self.pg_fallback.publish_batch(events).await
+    }
+
+    async fn flush(&self) -> Result<(), EventBusError> {
+        self.flush_buffer().await
     }
 
     async fn query_by_aggregate(

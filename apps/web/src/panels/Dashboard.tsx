@@ -4,14 +4,18 @@ import type { EventResponse } from '../types/generated';
 
 const PHASE_ORDER = [
   'intake',
+  'conversation_extraction',
   'plan_elaboration',
+  'plan_validation',
+  'review',
   'decomposition',
   'dispatch',
   'execution',
   'integration',
-  'review',
+  'certification_selection',
   'certification',
-  'completed',
+  'state_update',
+  'next_cycle_ready',
 ];
 
 function phasePct(phase: string): number {
@@ -215,9 +219,9 @@ function MetricsSummary() {
   const { data: certQueue } = useCertificationQueue();
   const { data: saturation } = useSaturationMetrics();
 
-  const pending = certQueue?.filter((c) => c.queue_status === 'pending').length ?? 0;
-  const passed = certQueue?.filter((c) => c.queue_status === 'passed').length ?? 0;
-  const failed = certQueue?.filter((c) => c.queue_status === 'failed').length ?? 0;
+  const pending = certQueue?.filter((c) => c.queue_status === 'pending' || c.queue_status === 'processing' || c.queue_status === 'submitted').length ?? 0;
+  const completed = certQueue?.filter((c) => c.queue_status === 'completed' || c.queue_status === 'acknowledged').length ?? 0;
+  const errored = certQueue?.filter((c) => c.queue_status === 'error' || c.queue_status === 'transport_error' || c.queue_status === 'timed_out').length ?? 0;
   const queuePressure = saturation?.queue_pressure ?? 0;
 
   return (
@@ -234,9 +238,9 @@ function MetricsSummary() {
         <span style={{ fontSize: 12, color: '#94a3b8' }}>
           Certs: <span style={{ color: '#eab308' }}>{pending} pending</span>
           {' / '}
-          <span style={{ color: '#22c55e' }}>{passed} passed</span>
+          <span style={{ color: '#22c55e' }}>{completed} completed</span>
           {' / '}
-          <span style={{ color: '#ef4444' }}>{failed} failed</span>
+          <span style={{ color: '#ef4444' }}>{errored} errored</span>
         </span>
       </div>
     </div>

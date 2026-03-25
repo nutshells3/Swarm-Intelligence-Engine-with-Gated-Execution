@@ -2,14 +2,20 @@ import { useTaskBoardProjection } from '../api/hooks';
 import { useUiStore } from '../stores/ui';
 import type { TaskBoardItem } from '../types/generated';
 
-type TaskStatusValue = 'queued' | 'running' | 'succeeded' | 'failed';
+type TaskStatusValue = 'queued' | 'running' | 'succeeded' | 'failed' | 'failed_permanent' | 'failed_retryable' | 'review_needed' | 'cancelled' | 'timed_out' | 'archived';
 
 function statusColor(status: string): string {
   switch (status as TaskStatusValue) {
     case 'queued': return '#6b7280';
     case 'running': return '#3b82f6';
     case 'succeeded': return '#22c55e';
-    case 'failed': return '#ef4444';
+    case 'failed':
+    case 'failed_permanent':
+    case 'failed_retryable':
+    case 'timed_out': return '#ef4444';
+    case 'review_needed': return '#eab308';
+    case 'cancelled':
+    case 'archived': return '#9ca3af';
     default: return '#94a3b8';
   }
 }

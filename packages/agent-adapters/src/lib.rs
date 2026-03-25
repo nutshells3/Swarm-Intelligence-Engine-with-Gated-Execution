@@ -8,7 +8,7 @@
 //!   provenance capture, and empty-output retry contracts.
 //!
 //! - **Codex adapter** (ADT-002, ADT-003, ADT-006): Codex CLI adapter
-//!   that runs `codex --approval-mode full-auto --quiet`.
+//!   that runs `codex exec --skip-git-repo-check`.
 //!
 //! - **Claude adapter** (ADT-004, ADT-005, ADT-007): Claude CLI adapter
 //!   that runs `claude --print --output-format json`.
@@ -58,7 +58,7 @@ pub use adapter::{
 pub use capability::{AdapterCapabilityRecord, AdapterCapabilityRegistry, AdapterHealth};
 pub use claude::{ClaudeAdapter, ClaudeCliAdapter, ClaudeRequestConfig, ClaudeResponseMeta, ClaudeStopReason};
 pub use codex::{CodexAdapter, CodexCliAdapter, CodexEnvVar, CodexRequestConfig, CodexResponseMeta};
-pub use normalize::{NormalizationPolicy, NormalizationResult, NormalizedOutput, normalize_output};
+pub use normalize::{NormalizationPolicy, NormalizationResult, NormalizedOutput, normalize_output, extract_codex_exec_content};
 pub use provenance::{InvocationOutcome, ProvenanceRecord};
 #[cfg(feature = "persistence")]
 pub use provenance::record_invocation;

@@ -40,11 +40,11 @@ const DEFAULT_PERIODIC_REVIEW_INTERVAL_SECS: i32 = 3600;
 /// for review kind values used in SQL.
 fn review_kind_to_sql(kind: ReviewKind) -> &'static str {
     match kind {
-        ReviewKind::Planning => "plan_review",
-        ReviewKind::Architecture => "architecture_review",
-        ReviewKind::Direction => "direction_review",
-        ReviewKind::Milestone => "milestone_review",
-        ReviewKind::Implementation => "implementation_review",
+        ReviewKind::Planning => "planning",
+        ReviewKind::Architecture => "architecture",
+        ReviewKind::Direction => "direction",
+        ReviewKind::Milestone => "milestone",
+        ReviewKind::Implementation => "implementation",
     }
 }
 
@@ -2147,7 +2147,7 @@ async fn check_periodic_reviews(
         sqlx::query(
             "INSERT INTO review_artifacts \
              (review_id, review_kind, target_ref, reviewer_template_id, status, score_or_verdict, approval_effect, conditions, recorded_at) \
-             VALUES ($1, $2, $3, $4, 'completed', $5, 'informational', $6::jsonb, now())",
+             VALUES ($1, $2, $3, $4, 'integrated', $5, 'informational', $6::jsonb, now())",
         )
         .bind(&review_id)
         .bind(plan_review_kind)
@@ -2244,11 +2244,11 @@ async fn check_periodic_reviews(
 async fn process_pending_reviews(pool: &PgPool) -> Result<u32, Box<dyn std::error::Error>> {
     let mut processed = 0u32;
 
-    // REV-012: Find review artifacts that are still pending (ingestion)
+    // REV-012: Find review artifacts that are still scheduled (ingestion)
     let pending = sqlx::query(
         "SELECT ra.review_id, ra.target_ref, ra.review_kind \
          FROM review_artifacts ra \
-         WHERE ra.status = 'pending' \
+         WHERE ra.status = 'scheduled' \
            AND ra.recorded_at < now() - interval '5 minutes'"
     )
     .fetch_all(pool)
@@ -2312,7 +2312,7 @@ async fn process_pending_reviews(pool: &PgPool) -> Result<u32, Box<dyn std::erro
 
                     // Update review status
                     sqlx::query(
-                        "UPDATE review_artifacts SET status = 'completed', \
+                        "UPDATE review_artifacts SET status = 'approved', \
                          score_or_verdict = 'auto_approved', \
                          approval_effect = 'approved' \
                          WHERE review_id = $1"
@@ -2433,13 +2433,14 @@ async fn select_certification_candidates(
               -- FCG-004 enhancement: certification_required flag on node
               OR COALESCE(n.certification_required, false) = true
               -- FCG-004 enhancement: plan gate demands certification
+              -- (gate_kind column removed; rely on condition_entries JSONB)
               OR EXISTS (
                   SELECT 1 FROM plan_gates pg
                   JOIN plans p ON pg.plan_id = p.plan_id
                   JOIN nodes n2 ON p.objective_id = n2.objective_id
                   WHERE n2.node_id = n.node_id
-                    AND pg.gate_kind = 'certification'
-                    AND pg.current_status NOT IN ('passed', 'waived')
+                    AND pg.condition_entries::text LIKE '%certification%'
+                    AND pg.current_status NOT IN ('satisfied', 'overridden')
               )
           )
         "#,
@@ -4066,7 +4067,7 @@ async fn enforce_retention_policies(pool: &PgPool, scaling: &ScalingContext) -> 
 
     // 1. Clean up old event_journal entries (keep last N days, default 30)
     let retention_days: i32 = sqlx::query_scalar(
-        "SELECT retention_days FROM retention_policies WHERE policy_target = 'event_journal' LIMIT 1",
+        "SELECT max_retention_days FROM retention_policies WHERE scope = 'event_journal' LIMIT 1",
     )
     .fetch_optional(pool)
     .await?

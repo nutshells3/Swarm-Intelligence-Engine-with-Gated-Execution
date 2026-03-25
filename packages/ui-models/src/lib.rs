@@ -33,6 +33,7 @@ pub use projections::{
     BranchMainlineProjection, CertificationQueueItem, CertificationQueueProjection,
     ConflictQueueItem, ConflictQueueProjection, DriftItem, DriftProjection,
     LoopHistoryCycleItem, LoopHistoryProjection, NodeGraphEdge, NodeGraphItem,
-    NodeGraphProjection, ObjectiveProgressItem, ObjectiveProgressProjection, ReviewQueueItem,
-    ReviewQueueProjection, TaskBoardItem, TaskBoardProjection,
+    NodeGraphProjection, ObjectiveProgressItem, ObjectiveProgressProjection,
+    ProjectionStaleness, ReviewQueueItem, ReviewQueueProjection, TaskBoardItem,
+    TaskBoardProjection, check_staleness,
 };

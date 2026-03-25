@@ -8,8 +8,16 @@ import type {
 function statusColor(status: string): string {
   switch (status) {
     case 'pending': return '#eab308';
-    case 'passed': return '#22c55e';
-    case 'failed': return '#ef4444';
+    case 'processing':
+    case 'submitted': return '#3b82f6';
+    case 'acknowledged':
+    case 'completed': return '#22c55e';
+    case 'error':
+    case 'transport_error':
+    case 'timed_out': return '#ef4444';
+    case 'invalidated':
+    case 'blocked':
+    case 'diverged': return '#9ca3af';
     default: return '#94a3b8';
   }
 }
@@ -65,11 +73,11 @@ function ProjectionSection({ items, pendingCount }: { items: CertificationQueueI
 function DetailSection({ entries }: { entries: CertificationQueueEntryResponse[] }) {
   if (entries.length === 0) return null;
 
-  const pending = entries.filter((e) => e.queue_status === 'pending');
-  const passed = entries.filter((e) => e.queue_status === 'passed');
-  const failed = entries.filter((e) => e.queue_status === 'failed');
+  const pending = entries.filter((e) => e.queue_status === 'pending' || e.queue_status === 'processing' || e.queue_status === 'submitted');
+  const completed = entries.filter((e) => e.queue_status === 'completed' || e.queue_status === 'acknowledged');
+  const errored = entries.filter((e) => e.queue_status === 'error' || e.queue_status === 'transport_error' || e.queue_status === 'timed_out');
   const other = entries.filter(
-    (e) => e.queue_status !== 'pending' && e.queue_status !== 'passed' && e.queue_status !== 'failed',
+    (e) => !['pending', 'processing', 'submitted', 'completed', 'acknowledged', 'error', 'transport_error', 'timed_out'].includes(e.queue_status),
   );
 
   function renderGroup(label: string, items: CertificationQueueEntryResponse[], color: string) {
@@ -122,8 +130,8 @@ function DetailSection({ entries }: { entries: CertificationQueueEntryResponse[]
     <div>
       <h3>Submissions</h3>
       {renderGroup('Pending', pending, '#eab308')}
-      {renderGroup('Passed', passed, '#22c55e')}
-      {renderGroup('Failed', failed, '#ef4444')}
+      {renderGroup('Completed', completed, '#22c55e')}
+      {renderGroup('Errored', errored, '#ef4444')}
       {renderGroup('Other', other, '#94a3b8')}
     </div>
   );
@@ -146,13 +154,13 @@ export default function Certification() {
       {entries && (
         <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: '#eab308' }}>
-            Pending: {entries.filter((e) => e.queue_status === 'pending').length}
+            Pending: {entries.filter((e) => e.queue_status === 'pending' || e.queue_status === 'processing' || e.queue_status === 'submitted').length}
           </span>
           <span style={{ fontSize: 13, color: '#22c55e' }}>
-            Passed: {entries.filter((e) => e.queue_status === 'passed').length}
+            Completed: {entries.filter((e) => e.queue_status === 'completed' || e.queue_status === 'acknowledged').length}
           </span>
           <span style={{ fontSize: 13, color: '#ef4444' }}>
-            Failed: {entries.filter((e) => e.queue_status === 'failed').length}
+            Errored: {entries.filter((e) => e.queue_status === 'error' || e.queue_status === 'transport_error' || e.queue_status === 'timed_out').length}
           </span>
           <span style={{ fontSize: 13, color: '#94a3b8' }}>
             Total: {entries.length}

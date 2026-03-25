@@ -115,13 +115,19 @@ pub async fn load_deployment_policy(
     })
 }
 
-/// Save (INSERT) a deployment policy record into the
-/// `deployment_policies` table. The caller is responsible for
-/// incrementing the revision; this function does not auto-increment.
+/// Save a deployment policy record into the `deployment_policies` table.
 ///
-/// Uses INSERT so that every revision is preserved as an immutable
-/// audit trail. The control plane reads the highest revision via
-/// [`load_deployment_policy`].
+/// The caller is responsible for incrementing the revision; this
+/// function does not auto-increment.
+///
+/// Each revision must use a **unique** `policy_id` because the table
+/// uses `policy_id TEXT PRIMARY KEY`. The control plane reads the
+/// highest revision for a scope via [`load_deployment_policy`].
+///
+/// If the same `policy_id` already exists, the row is updated to the
+/// new values (upsert). This prevents silent PK-conflict errors when
+/// the caller retries with the same id (playbook rule 2: no silent
+/// fallbacks -- errors surface explicitly).
 pub async fn save_deployment_policy(
     pool: &PgPool,
     policy: &DeploymentPolicyRecord,
@@ -149,7 +155,14 @@ pub async fn save_deployment_policy(
              (policy_id, revision, scope, deployment_mode, \
               update_channel, migration_compatibility, \
               created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
+         ON CONFLICT (policy_id) DO UPDATE SET \
+              revision = EXCLUDED.revision, \
+              scope = EXCLUDED.scope, \
+              deployment_mode = EXCLUDED.deployment_mode, \
+              update_channel = EXCLUDED.update_channel, \
+              migration_compatibility = EXCLUDED.migration_compatibility, \
+              updated_at = EXCLUDED.updated_at",
     )
     .bind(&policy.policy_id)
     .bind(policy.revision as i32)

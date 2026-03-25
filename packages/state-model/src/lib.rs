@@ -7,50 +7,120 @@ use user_policy::UserPolicySnapshot;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EventKind {
-    // Objective events (EVT-001)
+    // ── Objective events (EVT-001) ──
     ObjectiveCreated,
     ObjectiveUpdated,
-    // Plan events (EVT-002)
+    // ── Plan events (EVT-002) ──
     PlanCreated,
     PlanUpdated,
     PlanGateChanged,
-    // Loop events (EVT-003)
+    PlanArtifactsGenerated,
+    PlanDecomposed,
+    PlanGateEvaluated,
+    PlanGateForcedOverride,
+    PlanUpdatedFromExtract,
+    // ── Loop events (EVT-003) ──
     LoopCreated,
     LoopCycleAdvanced,
-    // Cycle events (EVT-004)
+    // ── Cycle events (EVT-004) ──
     CycleCreated,
     CyclePhaseTransitioned,
     CycleCompleted,
-    // Task events (EVT-005)
+    ExecutionCompleted,
+    IntegrationVerificationFailed,
+    PhaseStatusRecorded,
+    // ── Task events (EVT-005) ──
     TaskCreated,
     TaskStatusChanged,
     TaskAttemptStarted,
     TaskAttemptFinished,
-    // Worker events (EVT-006)
+    TaskCompleted,
+    TaskFailed,
+    TaskAttemptCompleted,
+    TaskRetryScheduled,
+    IntegrationVerificationComplete,
+    // ── Worker events (EVT-006) ──
     WorkerRegistered,
     WorkerHeartbeatReceived,
     WorkerCompleted,
-    // Certification events (EVT-007, EVT-008)
+    WorkerStatusHeartbeat,
+    // ── Certification events (EVT-007, EVT-008) ──
     CertificationSubmitted,
     CertificationReturned,
-    // Conflict events (EVT-009)
+    CertificationCompleted,
+    CertificationCandidateCreated,
+    CertificationConfigUpdated,
+    CertificationSettingsUpdated,
+    DualFormalizationDiverged,
+    // ── Conflict events (EVT-009) ──
     ConflictCreated,
     ConflictResolved,
-    // Mainline events (EVT-010)
+    ConflictAutoResolved,
+    AdjudicationTaskCreated,
+    FileConflictDetected,
+    MergeConflictDetected,
+    // ── Mainline events (EVT-010) ──
     MainlineIntegrationAttempted,
     MainlineIntegrationCompleted,
-    // Roadmap events
+    IntegrationVerifyNodeCreated,
+    // ── Roadmap events ──
     RoadmapNodeCreated,
     RoadmapNodeAbsorbed,
     RoadmapReprioritized,
-    // Review events
+    RoadmapNodeDeferred,
+    RoadmapNodeRejected,
+    RoadmapAbsorbed,
+    RoadmapReordered,
+    RoadmapTrackChanged,
+    MilestoneBridged,
+    // ── Review events ──
     ReviewArtifactCreated,
     ReviewCompleted,
-    // Skill events
+    ReviewCreated,
+    ReviewUpdated,
+    ReviewApproved,
+    ReviewAutoApproved,
+    ReviewNeeded,
+    // ── Skill events ──
     SkillPackRegistered,
     WorkerTemplateCreated,
-    // Policy events
+    // ── Policy events ──
     UserPolicySnapshotSaved,
+    DeploymentModeChanged,
+    // ── Conversation / chat events ──
+    ChatSessionCreated,
+    ChatSessionLinkedToObjective,
+    ConstraintsExtracted,
+    ChatMessageAdded,
+    ConversationExtracted,
+    BacklogDraftCreated,
+    ExtractProcessed,
+    // ── Drift events ──
+    DriftDetected,
+    ObjectiveDriftDetected,
+    DependencyDriftDetected,
+    // ── Recursive improvement events ──
+    ComparisonArtifactCreated,
+    LoopScoreCreated,
+    MilestoneTemplatesCreated,
+    DriftCheckCompleted,
+    SelfPromotionBlocked,
+    RecursiveReportGenerated,
+    SuccessPatternRecorded,
+    RoadmapSuggestionRecorded,
+    // ── Git / worktree events ──
+    WorktreeBound,
+    WorktreeReleased,
+    DirtyWorktreeDetected,
+    // ── Observability events ──
+    TickHeartbeat,
+    RetentionPolicyEnforced,
+    ProjectionSnapshot,
+    // ── Peer events ──
+    PeerMessageSent,
+    PeerMessageAcknowledged,
+    // ── Node events ──
+    NodeEdgeCreated,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

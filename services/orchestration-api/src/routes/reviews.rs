@@ -78,16 +78,17 @@ fn review_from_row(row: &sqlx::postgres::PgRow, duplicated: bool) -> Result<Revi
     })
 }
 
-// Valid review kinds
+// Valid review kinds -- must match the review_governance::ReviewKind enum
+// (snake_case serialization) and the CHECK constraint on review_artifacts.
 const VALID_REVIEW_KINDS: &[&str] = &[
-    "plan_review",
-    "architecture_review",
-    "direction_review",
-    "milestone_review",
-    "implementation_review",
+    "planning",
+    "architecture",
+    "direction",
+    "milestone",
+    "implementation",
 ];
 
-const VALID_STATUSES: &[&str] = &["pending", "in_progress", "approved", "rejected", "needs_revision"];
+const VALID_STATUSES: &[&str] = &["scheduled", "in_progress", "approved", "changes_requested", "superseded"];
 
 // ── Handlers ────────────────────────────────────────────────────────────
 
@@ -139,7 +140,7 @@ pub async fn create_review(
     let row = sqlx::query(
         &format!(
             "INSERT INTO review_artifacts (review_id, review_kind, target_ref, reviewer_template_id, status, recorded_at) \
-             VALUES ($1, $2, $3, $4, 'pending', now()) \
+             VALUES ($1, $2, $3, $4, 'scheduled', now()) \
              RETURNING {}", REVIEW_SELECT_COLS
         ),
     )
@@ -423,11 +424,11 @@ pub struct DigestQuery {
 /// Parse a review_kind SQL string back into `ReviewKind`.
 fn parse_review_kind(s: &str) -> ReviewKind {
     match s {
-        "plan_review" => ReviewKind::Planning,
-        "architecture_review" => ReviewKind::Architecture,
-        "direction_review" => ReviewKind::Direction,
-        "milestone_review" => ReviewKind::Milestone,
-        "implementation_review" => ReviewKind::Implementation,
+        "planning" => ReviewKind::Planning,
+        "architecture" => ReviewKind::Architecture,
+        "direction" => ReviewKind::Direction,
+        "milestone" => ReviewKind::Milestone,
+        "implementation" => ReviewKind::Implementation,
         _ => ReviewKind::Planning, // fallback
     }
 }

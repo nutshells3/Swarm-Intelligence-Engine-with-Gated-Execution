@@ -46,6 +46,7 @@ export type {
   ChatToTasksResponse,
   // Reviews
   ReviewResponse,
+  ReviewDigestResponse,
   CreateReviewRequest,
   UpdateReviewRequest,
   ApproveReviewRequest,
@@ -71,6 +72,7 @@ export type {
   BranchMainlineItem,
   ReviewQueueProjection,
   ReviewQueueItem,
+  PendingReviewItem,
   CertificationQueueProjection,
   CertificationQueueItem,
   ObjectiveProgressProjection,

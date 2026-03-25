@@ -303,27 +303,60 @@ async fn execute_task(
     provider_mode: Option<&str>,
     model_binding: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Get node_id and worker_role for this task
-    let task_info = sqlx::query("SELECT node_id, worker_role FROM tasks WHERE task_id = $1")
-        .bind(task_id)
-        .fetch_one(pool)
-        .await?;
+    // ── WRK-015: Terminal state guard ────────────────────────────────────
+    //
+    // Before executing, re-check that the task is still in 'running' state.
+    // Tasks in terminal states (succeeded, failed_permanent, failed_retryable
+    // with exhausted retry budget, cancelled, archived) must never be
+    // re-dispatched. This guards against race conditions where the task
+    // state changed between the dispatch query and execution start.
+    let task_info = sqlx::query(
+        "SELECT node_id, worker_role, status, retry_budget FROM tasks WHERE task_id = $1",
+    )
+    .bind(task_id)
+    .fetch_one(pool)
+    .await?;
     let node_id: String = task_info.try_get("node_id")?;
     let worker_role: String = task_info.try_get("worker_role").unwrap_or_default();
+    let current_status: String = task_info.try_get("status").unwrap_or_default();
+
+    // Terminal states: do not execute
+    match current_status.as_str() {
+        "succeeded" | "failed_permanent" | "cancelled" | "archived" => {
+            tracing::warn!(
+                task_id,
+                status = %current_status,
+                "WRK-015: Refusing to dispatch task in terminal state"
+            );
+            return Ok(());
+        }
+        "running" => { /* expected -- proceed */ }
+        other => {
+            tracing::warn!(
+                task_id,
+                status = %other,
+                "Unexpected task status at dispatch time; proceeding cautiously"
+            );
+        }
+    }
 
     // Special handling for integration verification tasks — bypass adapter
     if worker_role == "integration_verifier" {
         return execute_integration_verify(pool, task_id, &node_id, worktree_repo_root).await;
     }
 
-    // Select the best available adapter
+    // SPN-001, ADT-009: Select the best available adapter with fallback.
+    // Uses select_with_fallback to skip unhealthy adapters and try the next one.
     let adapter = registry
-        .select(provider_mode)
-        .or_else(|| registry.select(model_binding.as_deref()))
-        .or_else(|| registry.select(None));
+        .select_with_fallback(provider_mode)
+        .or_else(|| registry.select_with_fallback(model_binding.as_deref()))
+        .or_else(|| registry.select_with_fallback(None));
 
     let Some(adapter) = adapter else {
-        tracing::warn!(task_id, "No adapter available, skipping");
+        tracing::error!(
+            task_id,
+            "No adapter available — install claude CLI, codex CLI, or set API keys. Skipping task."
+        );
         return Ok(());
     };
 
@@ -575,14 +608,103 @@ async fn execute_task(
         working_directory: worktree_path.to_string_lossy().to_string(),
         model: model_binding,
         provider_mode: provider_mode.unwrap_or("auto").to_string(),
-        timeout_seconds: 300,
+        timeout_seconds: 600,
         max_tokens: Some(policy_max_output_tokens as u32),
         temperature: None,
     };
 
     // Invoke the adapter (async via BoxedAdapter)
     let adapter_name = adapter.name().to_string();
-    let response = adapter.invoke_boxed(request).await;
+
+    // ── WRK-013: Emit periodic heartbeat events during adapter execution ──
+    //
+    // Spawn a background task that writes heartbeat events to the event_journal
+    // every 30 seconds while the adapter is running. This lets the control plane
+    // and projections know the worker is still alive and making progress.
+    // We use a oneshot channel as a cancellation signal (no extra crate needed).
+    let heartbeat_pool = pool.clone();
+    let heartbeat_task_id = task_id.to_string();
+    let heartbeat_attempt_id = attempt_id.clone();
+    let heartbeat_adapter_name = adapter_name.clone();
+    let (cancel_tx, mut cancel_rx) = tokio::sync::oneshot::channel::<()>();
+
+    let heartbeat_handle = tokio::spawn(async move {
+        let mut tick_count: u64 = 0;
+        loop {
+            tokio::select! {
+                _ = &mut cancel_rx => break,
+                _ = tokio::time::sleep(Duration::from_secs(30)) => {}
+            }
+            tick_count += 1;
+            let hb_event_id = Uuid::now_v7().to_string();
+            let hb_idem = format!("heartbeat-{}-{}", heartbeat_attempt_id, tick_count);
+            let hb_payload = serde_json::json!({
+                "task_id": heartbeat_task_id,
+                "attempt_id": heartbeat_attempt_id,
+                "adapter": heartbeat_adapter_name,
+                "tick": tick_count,
+                "status": "running",
+                "trigger": "worker_heartbeat"
+            });
+            let _ = sqlx::query(
+                "INSERT INTO event_journal \
+                     (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at) \
+                 VALUES ($1, 'worker', $2, 'worker_status_heartbeat', $3, $4, now()) \
+                 ON CONFLICT (aggregate_kind, aggregate_id, idempotency_key) DO NOTHING",
+            )
+            .bind(&hb_event_id)
+            .bind(&heartbeat_task_id)
+            .bind(&hb_idem)
+            .bind(&hb_payload)
+            .execute(&heartbeat_pool)
+            .await;
+        }
+    });
+
+    // ── WRK-012: Server-side timeout enforcement ───────────────────────
+    //
+    // Wrap the adapter invocation with a tokio timeout. The adapter has its
+    // own internal timeout, but the server-side timeout is a safety net that
+    // ensures we never wait indefinitely. The server-side timeout is 10%
+    // longer than the adapter timeout to allow the adapter to report its
+    // own timeout status rather than being killed externally.
+    let server_timeout = Duration::from_secs(request.timeout_seconds as u64 + 30);
+    let response = match tokio::time::timeout(server_timeout, adapter.invoke_boxed(request)).await {
+        Ok(resp) => resp,
+        Err(_elapsed) => {
+            tracing::error!(
+                task_id,
+                timeout_secs = server_timeout.as_secs(),
+                "WRK-012: Server-side timeout triggered -- adapter did not respond in time"
+            );
+            // Synthesize a timeout response
+            agent_adapters::adapter::AdapterResponse {
+                task_id: task_id.to_string(),
+                status: AdapterStatus::TimedOut,
+                output: String::new(),
+                stdout: String::new(),
+                stderr: format!(
+                    "Server-side timeout after {}s (adapter unresponsive)",
+                    server_timeout.as_secs()
+                ),
+                duration_ms: server_timeout.as_millis() as u64,
+                artifacts: vec![],
+                provenance: agent_adapters::adapter::AdapterProvenance {
+                    invocation_id: format!("timeout-{}", attempt_id),
+                    adapter_name: adapter_name.clone(),
+                    model_used: String::new(),
+                    provider: String::new(),
+                    started_at: String::new(),
+                    finished_at: String::new(),
+                },
+                token_usage: None,
+            }
+        }
+    };
+
+    // Stop the heartbeat background task now that the adapter has returned
+    let _ = cancel_tx.send(());
+    let _ = heartbeat_handle.await;
 
     // ── WRK-014: Classify failures as transient vs permanent ──────────
     //
@@ -1393,7 +1515,7 @@ async fn execute_integration_verify(
     if let Some(ref obj_id) = objective_id {
         let review_count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM review_artifacts \
-             WHERE target_ref = $1 AND status IN ('completed', 'approved')",
+             WHERE target_ref = $1 AND status IN ('approved', 'integrated')",
         )
         .bind(obj_id)
         .fetch_one(pool)

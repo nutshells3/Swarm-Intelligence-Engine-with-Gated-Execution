@@ -277,3 +277,35 @@ pub struct ArtifactTimelineProjection {
     pub total_count: u32,
     pub computed_at: DateTime<Utc>,
 }
+
+// ── Stale projection lifecycle ─────────────────────────────────────────────
+//
+// Every projection must expose a staleness indicator so consumers can
+// distinguish fresh derived data from stale-but-valid or rebuild-failed data.
+// This closes the stale rebuild/projection lifecycle per playbook rule 6.
+
+/// Staleness status for any read-model projection.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ProjectionStaleness {
+    /// Projection was computed within the expected refresh interval.
+    Fresh,
+    /// Projection is older than the expected refresh interval but still
+    /// structurally valid (no corruption, just lag).
+    Stale,
+    /// Projection rebuild failed; data shown is from the last successful build.
+    RebuildFailed,
+}
+
+/// Check whether a projection is stale given its computed_at timestamp
+/// and a maximum age threshold in seconds.
+pub fn check_staleness(computed_at: DateTime<Utc>, max_age_secs: i64) -> ProjectionStaleness {
+    let age = chrono::Utc::now()
+        .signed_duration_since(computed_at)
+        .num_seconds();
+    if age <= max_age_secs {
+        ProjectionStaleness::Fresh
+    } else {
+        ProjectionStaleness::Stale
+    }
+}

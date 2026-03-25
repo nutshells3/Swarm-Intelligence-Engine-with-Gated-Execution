@@ -1,9 +1,13 @@
 //! ADT-002, ADT-003, ADT-006: Codex CLI adapter.
 //!
 //! Wraps the `codex` CLI tool as a governed adapter.
-//! Runs `codex --approval-mode full-auto --quiet "<prompt>"` as a subprocess,
+//! Runs `codex exec --skip-git-repo-check "<prompt>"` as a subprocess,
 //! capturing stdout/stderr, enforcing UTF-8, handling timeouts, and
 //! retrying once on empty output.
+//!
+//! The `--skip-git-repo-check` flag is required for codex to operate
+//! inside dynamically created git worktrees. Output is parsed to
+//! extract the actual response content from the multi-section format.
 
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
@@ -12,7 +16,9 @@ use tokio::process::Command;
 use crate::adapter::{
     AdapterProvenance, AdapterRequest, AdapterResponse, AdapterStatus, AgentAdapter, AgentKind,
 };
-use crate::normalize::{normalize_output, NormalizationPolicy, NormalizationResult};
+use crate::normalize::{
+    extract_codex_exec_content, normalize_output, NormalizationPolicy, NormalizationResult,
+};
 
 // ── Codex-specific config types (preserved from ADT-002/003) ─────────────
 
@@ -77,14 +83,19 @@ impl CodexCliAdapter {
         request: &AdapterRequest,
         timeout: Duration,
     ) -> Result<(String, String, Option<i32>), String> {
-        let result = tokio::time::timeout(
-            timeout,
-            Command::new(&self.cli_path)
-                .args(["--approval-mode", "full-auto", "--quiet", &request.prompt])
-                .current_dir(&request.working_directory)
-                .output(),
-        )
-        .await;
+        // On Windows, npm-installed CLIs are .cmd scripts that need cmd.exe.
+        let mut cmd = if cfg!(windows) {
+            let mut c = Command::new("cmd");
+            c.args(["/C", &self.cli_path, "exec", "--skip-git-repo-check", &request.prompt]);
+            c
+        } else {
+            let mut c = Command::new(&self.cli_path);
+            c.args(["exec", "--skip-git-repo-check", &request.prompt]);
+            c
+        };
+        cmd.current_dir(&request.working_directory);
+
+        let result = tokio::time::timeout(timeout, cmd.output()).await;
 
         match result {
             Ok(Ok(output)) => {
@@ -176,8 +187,13 @@ impl AgentAdapter for CodexCliAdapter {
         let duration_ms = start.elapsed().as_millis() as u64;
         let finished_at = chrono::Utc::now();
 
-        // Normalize final output.
-        let normalized = normalize_output(&stdout_raw, &policy);
+        // ADT-006: Extract response content from codex exec multi-section output.
+        // Codex exec produces structured output with a "codex" section header,
+        // the actual response, and then metadata lines (model, tokens used, etc.).
+        let extracted_content = extract_codex_exec_content(&stdout_raw);
+
+        // Normalize the extracted content.
+        let normalized = normalize_output(&extracted_content, &policy);
 
         AdapterResponse {
             task_id,
@@ -190,7 +206,7 @@ impl AgentAdapter for CodexCliAdapter {
             artifacts: Vec::new(),
             provenance: AdapterProvenance {
                 adapter_name: "codex-cli".to_string(),
-                model_used: request.model.unwrap_or_else(|| "codex-default".to_string()),
+                model_used: request.model.unwrap_or_else(|| "gpt-5.4".to_string()),
                 provider: "openai".to_string(),
                 invocation_id,
                 started_at: started_at.to_rfc3339(),

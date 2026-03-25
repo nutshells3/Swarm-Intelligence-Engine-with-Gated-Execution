@@ -19,6 +19,17 @@ pub trait EventBus: Send + Sync {
     /// Publish a batch of events in one round-trip.
     async fn publish_batch(&self, events: Vec<Event>) -> Result<(), EventBusError>;
 
+    /// Flush any internally buffered events to durable storage.
+    ///
+    /// Implementations that buffer events (e.g. NatsEventBus) must flush
+    /// their buffers here. Unbuffered implementations (PgEventBus) are
+    /// no-ops. Callers must invoke flush() before shutdown to avoid
+    /// silent data loss (playbook rule 2: no silent fallbacks).
+    async fn flush(&self) -> Result<(), EventBusError> {
+        // Default: no-op for unbuffered implementations.
+        Ok(())
+    }
+
     /// Query recent events by aggregate.
     async fn query_by_aggregate(
         &self,

@@ -26,7 +26,7 @@ pub use metrics::{
 };
 pub use projections::{
     ProjectedCostSummary, ProjectedCycleHealth, ProjectedTokenUsage,
-    UiMetricsProjection,
+    ProjectionFreshness, UiMetricsProjection,
 };
 pub use sidecars::{
     PhaseStatusSidecar, RetryableFailureMetric, RetryableFailureKind,

@@ -63,9 +63,12 @@ function LoopRow({ loop, cycles }: { loop: LoopResponse; cycles: CycleResponse[]
 // ---- Helpers ----
 
 function phaseColor(phase: string): string {
-  if (phase === 'completed') return '#22c55e';
+  if (phase === 'next_cycle_ready' || phase === 'state_update') return '#22c55e';
   if (phase === 'execution' || phase === 'dispatch') return '#3b82f6';
-  if (phase === 'review' || phase === 'certification') return '#eab308';
+  if (phase === 'review' || phase === 'certification' || phase === 'certification_selection') return '#eab308';
+  if (phase === 'plan_elaboration' || phase === 'plan_validation' || phase === 'conversation_extraction') return '#a78bfa';
+  if (phase === 'integration') return '#f59e0b';
+  if (phase === 'intake' || phase === 'decomposition') return '#06b6d4';
   if (phase.includes('fail') || phase.includes('error')) return '#ef4444';
   return '#6b7280';
 }

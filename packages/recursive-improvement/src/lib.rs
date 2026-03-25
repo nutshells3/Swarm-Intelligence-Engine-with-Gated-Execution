@@ -29,7 +29,7 @@ pub use comparison::{ComparisonArtifact, ComparisonBaseline, MetricDelta, Regres
 pub use drift::{
     ApprovalDrift, DriftCheckArtifact, DriftKind, PolicyDrift, SchemaDrift, SkillDrift,
 };
-pub use memory::{MemoryEntry, RecursiveMemory, ReuseSignal, SupersessionChain};
+pub use memory::{LearningReinjection, MemoryEntry, RecursiveMemory, ReuseSignal, SupersessionChain};
 pub use objective::{ObjectiveClassification, SelfImprovementObjective, TrustBoundaryImpact};
 pub use repo_target::{
     AllowDenyRule, RepoTargetPolicy, RepoTargetRule, TargetScope, WorktreeIsolationRequirement,

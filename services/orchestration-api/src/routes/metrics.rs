@@ -314,7 +314,7 @@ pub async fn saturation_metrics(
     State(state): State<AppState>,
 ) -> ApiResult<SaturationMetrics> {
     // OBS-010: Query tasks table for saturation counts.
-    // Return zero values instead of errors when the table is empty or missing.
+    // Propagate query errors rather than silently returning zeros.
     let task_row = sqlx::query(
         r#"SELECT
              COUNT(*) FILTER (WHERE status = 'queued') as queued_tasks,
@@ -322,16 +322,11 @@ pub async fn saturation_metrics(
            FROM tasks"#,
     )
     .fetch_one(&state.pool)
-    .await;
+    .await
+    .map_err(internal_error)?;
 
-    let (queued, running) = match task_row {
-        Ok(row) => {
-            let q: i64 = row.try_get("queued_tasks").unwrap_or(0);
-            let r: i64 = row.try_get("running_tasks").unwrap_or(0);
-            (q, r)
-        }
-        Err(_) => (0i64, 0i64),
-    };
+    let queued: i64 = task_row.try_get("queued_tasks").map_err(internal_error)?;
+    let running: i64 = task_row.try_get("running_tasks").map_err(internal_error)?;
 
     let active_workers = running; // proxy: one worker per running task
     let queue_pressure = if running > 0 {
@@ -343,7 +338,7 @@ pub async fn saturation_metrics(
     };
 
     // OBS-010: Also query worker_success_rates if data exists.
-    // Return None/zero instead of errors when the table is empty.
+    // Propagate query errors rather than silently returning zeros.
     let wsr_row = sqlx::query(
         r#"SELECT
              COALESCE(SUM(total_attempts), 0) as total_attempts,
@@ -352,19 +347,15 @@ pub async fn saturation_metrics(
            FROM worker_success_rates"#,
     )
     .fetch_one(&state.pool)
-    .await;
+    .await
+    .map_err(internal_error)?;
 
-    let (worker_success_rate, worker_total_attempts) = match wsr_row {
-        Ok(row) => {
-            let total: i64 = row.try_get::<i64, _>("total_attempts").unwrap_or(0);
-            let successes: i64 = row.try_get::<i64, _>("successes").unwrap_or(0);
-            if total > 0 {
-                (Some(successes as f64 / total as f64), total)
-            } else {
-                (None, 0)
-            }
-        }
-        Err(_) => (None, 0),
+    let wsr_total: i64 = wsr_row.try_get("total_attempts").map_err(internal_error)?;
+    let wsr_successes: i64 = wsr_row.try_get("successes").map_err(internal_error)?;
+    let (worker_success_rate, worker_total_attempts) = if wsr_total > 0 {
+        (Some(wsr_successes as f64 / wsr_total as f64), wsr_total)
+    } else {
+        (None, 0)
     };
 
     Ok(Json(SaturationMetrics {

@@ -146,14 +146,93 @@ pub trait SpawnBackend: Send + Sync {
 /// Wraps the existing `BoxedAdapter::invoke_boxed()` call. Each spawn runs
 /// the adapter in a tokio task, which in turn launches the CLI subprocess.
 /// This is the default and currently only concrete backend.
+///
+/// SPN-002: The spawn backend is the actual main execution path, not a
+/// parallel path. The dispatch layer uses `spawn_and_wait()` which
+/// combines spawn handle creation with adapter invocation.
 pub struct SubprocessSpawnBackend {
     adapter: Arc<dyn BoxedAdapter>,
+    /// SPN-002: Stored configs indexed by spawn_id for wait() to retrieve.
+    pending_configs: std::sync::Mutex<std::collections::HashMap<String, SpawnConfig>>,
 }
 
 impl SubprocessSpawnBackend {
     /// Create a new subprocess backend wrapping the given adapter.
     pub fn new(adapter: Arc<dyn BoxedAdapter>) -> Self {
-        Self { adapter }
+        Self {
+            adapter,
+            pending_configs: std::sync::Mutex::new(std::collections::HashMap::new()),
+        }
+    }
+
+    /// SPN-002: Combined spawn-and-wait that is the actual main execution path.
+    ///
+    /// This is the preferred entry point: it spawns the agent (creating a
+    /// handle) and immediately invokes the adapter, returning both the handle
+    /// and the response. The dispatch layer should use this instead of
+    /// calling spawn() and wait() separately.
+    pub async fn spawn_and_wait(
+        &self,
+        config: SpawnConfig,
+    ) -> Result<SpawnResult, SpawnError> {
+        let handle = self.spawn(config.clone()).await?;
+        let response = self.adapter.invoke_boxed(config.request).await;
+
+        Ok(SpawnResult {
+            response,
+            handle,
+        })
+    }
+
+    /// SPN-006: Spawn using a CommandPrepManifest with prompt delivery mode.
+    ///
+    /// This extends `spawn_and_wait` by applying the manifest's
+    /// `prompt_delivery` mode to the adapter request. Without this, the
+    /// `PromptDeliveryMode` enum is dead code.
+    ///
+    /// Delivery modes:
+    /// - `StdinPipe`: prompt is passed as the request prompt (default).
+    /// - `CommandLineArg`: prompt is appended as `--prompt` arg; request
+    ///   prompt is cleared so the adapter does not double-deliver.
+    /// - `TempFile`: prompt is written to a temp file; the path replaces
+    ///   the request prompt so the adapter reads from the file.
+    pub async fn spawn_with_manifest(
+        &self,
+        mut config: SpawnConfig,
+        manifest: &CommandPrepManifest,
+    ) -> Result<SpawnResult, SpawnError> {
+        match manifest.prompt_delivery {
+            PromptDeliveryMode::StdinPipe => {
+                // Default: prompt stays in request.prompt, adapter reads it.
+            }
+            PromptDeliveryMode::CommandLineArg => {
+                // Append prompt as --prompt arg; clear the request prompt
+                // so the adapter does not pipe it to stdin as well.
+                config.env_vars.push((
+                    "SWARM_PROMPT_ARG".to_string(),
+                    config.request.prompt.clone(),
+                ));
+                config.request.prompt = String::new();
+            }
+            PromptDeliveryMode::TempFile => {
+                // Write prompt to temp file; replace request prompt with path.
+                let temp_dir = std::env::temp_dir();
+                let temp_path = temp_dir.join(format!("siege-prompt-{}.txt", config.task_id));
+                tokio::fs::write(&temp_path, config.request.prompt.as_bytes())
+                    .await
+                    .map_err(|e| SpawnError {
+                        message: format!("Failed to write prompt temp file: {}", e),
+                        retryable: false,
+                    })?;
+                config.env_vars.push((
+                    "SWARM_PROMPT_FILE".to_string(),
+                    temp_path.to_string_lossy().to_string(),
+                ));
+                config.request.prompt = String::new();
+            }
+        }
+
+        self.spawn_and_wait(config).await
     }
 }
 
@@ -161,11 +240,11 @@ impl SpawnBackend for SubprocessSpawnBackend {
     async fn spawn(&self, config: SpawnConfig) -> Result<SpawnHandle, SpawnError> {
         let spawn_id = uuid::Uuid::now_v7().to_string();
 
-        // The subprocess is launched inside invoke_boxed which is called
-        // by the dispatch layer after obtaining a handle. We just validate
-        // the configuration here and return a handle.
-        //
-        // The actual invocation happens in `wait()`.
+        // SPN-002: Store the config so wait() can retrieve it.
+        if let Ok(mut pending) = self.pending_configs.lock() {
+            pending.insert(spawn_id.clone(), config.clone());
+        }
+
         Ok(SpawnHandle {
             spawn_id,
             task_id: config.task_id,
@@ -188,27 +267,31 @@ impl SpawnBackend for SubprocessSpawnBackend {
     }
 
     async fn wait(&self, handle: &SpawnHandle) -> Result<SpawnResult, SpawnError> {
-        // Build a minimal request from the handle's task_id.
-        // In practice, the dispatch layer calls invoke_boxed directly;
-        // this is the wrapper that makes it fit the SpawnBackend contract.
-        //
-        // The full request must be provided by the caller through spawn().
-        // For now we return an error since wait() without the original
-        // config is incomplete. The intended usage pattern is:
-        //
-        //   let handle = backend.spawn(config.clone()).await?;
-        //   // ... later ...
-        //   let response = adapter.invoke_boxed(config.request).await;
-        //
-        // The SubprocessSpawnBackend is a thin wrapper; the real subprocess
-        // management happens inside the adapter.
-        Err(SpawnError {
-            message: format!(
-                "SubprocessSpawnBackend::wait() for task {} -- \
-                 use adapter.invoke_boxed() directly for subprocess invocations",
-                handle.task_id
-            ),
-            retryable: false,
+        // SPN-002: Retrieve the stored config and invoke the adapter.
+        let config = {
+            let mut pending = self.pending_configs.lock().map_err(|e| SpawnError {
+                message: format!("Failed to lock pending configs: {}", e),
+                retryable: false,
+            })?;
+            pending.remove(&handle.spawn_id)
+        };
+
+        let Some(config) = config else {
+            return Err(SpawnError {
+                message: format!(
+                    "No pending config for spawn_id={} (task={}). \
+                     Use spawn_and_wait() for the recommended execution path.",
+                    handle.spawn_id, handle.task_id
+                ),
+                retryable: false,
+            });
+        };
+
+        let response = self.adapter.invoke_boxed(config.request).await;
+
+        Ok(SpawnResult {
+            response,
+            handle: handle.clone(),
         })
     }
 

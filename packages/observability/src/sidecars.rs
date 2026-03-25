@@ -53,6 +53,9 @@ pub struct PhaseStatusSidecar {
 /// A heartbeat record emitted by a session (orchestration loop instance)
 /// at regular intervals. Used for liveness detection and session-level
 /// diagnostics.
+///
+/// CSV caution: use bounded cadence and archive policy -- do not flood
+/// the state store with unbounded heartbeat noise.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SessionHeartbeatLog {
     pub session_id: String,
@@ -66,6 +69,10 @@ pub struct SessionHeartbeatLog {
     pub healthy: bool,
     /// Optional diagnostic message if unhealthy.
     pub diagnostic: Option<String>,
+    /// Cadence interval in seconds at which this heartbeat is emitted.
+    /// Consumers MUST respect this cadence when archiving to prevent
+    /// unbounded state-store growth.
+    pub cadence_seconds: u32,
     pub recorded_at: DateTime<Utc>,
 }
 

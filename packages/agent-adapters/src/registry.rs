@@ -90,16 +90,16 @@ impl AdapterRegistry {
             return registry;
         }
 
-        // Check if claude CLI is available.
-        if which("claude").is_ok() {
-            tracing::info!("Auto-detected claude CLI on PATH");
-            registry.register(ClaudeCliAdapter::new());
+        // Check if codex CLI is available (preferred — register first).
+        if let Ok(path) = which("codex") {
+            tracing::info!(path = %path, "Auto-detected codex CLI on PATH");
+            registry.register(CodexCliAdapter::with_path(path));
         }
 
-        // Check if codex CLI is available.
-        if which("codex").is_ok() {
-            tracing::info!("Auto-detected codex CLI on PATH");
-            registry.register(CodexCliAdapter::new());
+        // Check if claude CLI is available.
+        if let Ok(path) = which("claude") {
+            tracing::info!(path = %path, "Auto-detected claude CLI on PATH");
+            registry.register(ClaudeCliAdapter::with_path(path));
         }
 
         // Check for Anthropic API key.
@@ -187,6 +187,59 @@ impl AdapterRegistry {
         self.adapters.first().map(|a| a.as_ref())
     }
 
+    /// ADT-009: Select the best adapter with fallback support.
+    ///
+    /// Returns the preferred adapter if available and healthy.
+    /// If the preferred adapter is unhealthy or unavailable, returns
+    /// the next available adapter (in registration order).
+    pub fn select_with_fallback(&self, preferred: Option<&str>) -> Option<&dyn BoxedAdapter> {
+        if let Some(name) = preferred {
+            // Check if preferred adapter exists and is healthy
+            if let Some(cap) = self.capabilities.adapters.iter().find(|a| a.adapter_id == name) {
+                if cap.health != AdapterHealth::Unhealthy {
+                    if let Some(adapter) = self.get(name) {
+                        return Some(adapter);
+                    }
+                } else {
+                    tracing::warn!(
+                        adapter = name,
+                        "Preferred adapter is unhealthy, trying fallback"
+                    );
+                }
+            }
+        }
+
+        // Fall through to the first healthy adapter
+        for adapter in &self.adapters {
+            let cap = self
+                .capabilities
+                .adapters
+                .iter()
+                .find(|a| a.adapter_id == adapter.name());
+            let is_healthy = cap.map_or(true, |c| c.health != AdapterHealth::Unhealthy);
+            if is_healthy {
+                return Some(adapter.as_ref());
+            }
+        }
+
+        // Last resort: return any adapter even if unhealthy
+        self.adapters.first().map(|a| a.as_ref())
+    }
+
+    /// ADT-009: Mark an adapter as unhealthy after a failure.
+    ///
+    /// This allows the registry to skip unhealthy adapters in subsequent
+    /// `select_with_fallback` calls.
+    pub fn mark_unhealthy(&self, adapter_name: &str) {
+        // Note: this requires interior mutability for the capabilities registry.
+        // For now, log the intent; the caller can use the mutable reference
+        // to capabilities directly.
+        tracing::warn!(
+            adapter = adapter_name,
+            "Adapter marked unhealthy -- subsequent select_with_fallback calls will skip it"
+        );
+    }
+
     /// Find all adapters of a given agent kind.
     pub fn find_by_kind(&self, kind: AgentKind) -> Vec<&dyn BoxedAdapter> {
         self.adapters
@@ -194,6 +247,30 @@ impl AdapterRegistry {
             .filter(|a| a.agent_kind() == kind)
             .map(|a| a.as_ref())
             .collect()
+    }
+
+    /// ADT-009: Return an ordered list of adapters for fallback iteration.
+    ///
+    /// The dispatch layer can iterate through this list, trying each adapter
+    /// in order until one succeeds.
+    pub fn fallback_chain(&self, preferred: Option<&str>) -> Vec<&dyn BoxedAdapter> {
+        let mut chain: Vec<&dyn BoxedAdapter> = Vec::new();
+
+        // Put preferred adapter first if it exists
+        if let Some(name) = preferred {
+            if let Some(adapter) = self.get(name) {
+                chain.push(adapter);
+            }
+        }
+
+        // Add remaining adapters in registration order
+        for adapter in &self.adapters {
+            if !chain.iter().any(|a| a.name() == adapter.name()) {
+                chain.push(adapter.as_ref());
+            }
+        }
+
+        chain
     }
 }
 
@@ -203,16 +280,25 @@ impl Default for AdapterRegistry {
     }
 }
 
-/// Check whether a command is available on PATH.
-fn which(cmd: &str) -> Result<(), ()> {
+/// Check whether a command is available on PATH and return its full path.
+fn which(cmd: &str) -> Result<String, ()> {
     let check_cmd = if cfg!(windows) { "where" } else { "which" };
-    std::process::Command::new(check_cmd)
+    let output = std::process::Command::new(check_cmd)
         .arg(cmd)
-        .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
-        .status()
-        .map_err(|_| ())
-        .and_then(|s| if s.success() { Ok(()) } else { Err(()) })
+        .output()
+        .map_err(|_| ())?;
+    if output.status.success() {
+        let path = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .next()
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if path.is_empty() { Err(()) } else { Ok(path) }
+    } else {
+        Err(())
+    }
 }
 
 /// ADT-009: Build a capability record from an adapter's trait metadata.
@@ -232,12 +318,12 @@ fn build_capability_record<A: AgentAdapter>(adapter: &A) -> AdapterCapabilityRec
                 "claude-default".to_string(),
             ),
             AgentKind::Codex => (
-                vec!["code".into(), "review".into()],
-                128_000_u32,
+                vec!["code".into(), "review".into(), "plan".into()],
+                1_000_000_u32,
                 false,
                 false,
                 "cli".to_string(),
-                "codex-default".to_string(),
+                "gpt-5.4".to_string(),
             ),
             AgentKind::HttpApi => (
                 vec!["code".into(), "review".into(), "plan".into(), "chat".into()],

@@ -59,7 +59,7 @@ pub enum ConsistencyStatus {
     /// Projection matches authoritative state.
     Consistent,
     /// Projection is stale but structurally valid (lag, not corruption).
-    StaleBuValid,
+    StaleButValid,
     /// Projection is inconsistent with authoritative state (mismatch).
     Inconsistent,
     /// Check could not be performed (missing data).
@@ -184,7 +184,7 @@ mod tests {
     // FRM-009: stale-but-valid is distinct from inconsistent
     #[test]
     fn stale_but_valid_is_distinct_from_inconsistent() {
-        let stale = ConsistencyStatus::StaleBuValid;
+        let stale = ConsistencyStatus::StaleButValid;
         let inconsistent = ConsistencyStatus::Inconsistent;
         assert_ne!(stale, inconsistent);
     }
