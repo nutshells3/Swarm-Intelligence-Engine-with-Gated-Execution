@@ -271,3 +271,7 @@ packages/
 ## License
 
 Proprietary.
+
+
+## Current status
+Prototype. Full release 3/29
