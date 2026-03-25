@@ -10,6 +10,8 @@ This is not a “planning-as-a-suggestion” system. In SIEGE, planning is a har
 
 <video src="https://github.com/user-attachments/assets/a1b86f0e-d8a7-4d9f-886c-e18f7d02440a" controls width="100%"></video>
 
+> **Note:** This video is from an earlier build and does not reflect the current state of the engine.
+
 ---
 
 ## Documentation
