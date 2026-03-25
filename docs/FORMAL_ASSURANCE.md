@@ -140,6 +140,98 @@ Formal assurance makes the most sense when one or more of these are true:
 - review disagreement is too costly to resolve informally,
 - the cost of silent failure is higher than the cost of additional gating.
 
+## Hybrid certification model
+
+SIEGE runs certification at two points in the cycle, not one.
+
+**Per-task certification (Phase 8a)** runs during execution. When a task on a `certification_required` node succeeds, the engine submits it to the certification queue immediately. The cycle will not advance to integration until per-task certification passes. This catches function-level correctness claims early.
+
+**Post-integration certification (Phase 10)** runs after merge. System-level claims that depend on multiple modules being integrated together are swept in a second pass. This is where cross-module invariants and integration properties get verified.
+
+```text
+execution
+  |-- task succeeds --> certification_required? --> cert queue --> formal-claim CLI
+  |-- cert passed? --> allow integration
+  |-- cert failed? --> block integration, retry or escalate
+  |
+  v
+integration
+  |-- post-merge certification sweep (system-level claims)
+```
+
+## Policy configuration
+
+Certification is controlled entirely through the `certification_config` policy. No code changes are needed to switch modes.
+
+```json
+{
+  "enabled": true,
+  "frequency": "critical_only",
+  "routing": "local",
+  "grace_period_seconds": 10,
+  "certification_timeout_seconds": 120,
+  "formalizer_a": { "enabled": true, "mode": "required" },
+  "formalizer_b": { "enabled": true, "mode": "optional" }
+}
+```
+
+| Field | Effect |
+|-------|--------|
+| `enabled` | Master switch for the entire certification pipeline |
+| `frequency` | `always` (every task), `critical_only` (keyword + flag match), `on_request` (manual), `off` |
+| `routing` | `local` (CLI gateway) or `remote` (HTTP gateway) |
+| `grace_period_seconds` | Cooldown after a failed certification before retrying the same candidate |
+| `certification_timeout_seconds` | Maximum time for a single certification run |
+| `formalizer_a/b` | Dual formalization: `required` means this formalizer must run; `optional` means it runs but does not block on failure |
+
+Set via API:
+
+```
+PATCH /api/policies
+Content-Type: application/json
+
+{
+  "policy_id": "certification_config",
+  "policy_payload": { ... },
+  "idempotency_key": "cert-update-001"
+}
+```
+
+## Connecting the formal-claim stack
+
+SIEGE delegates actual formal verification to external engines. The connection is environment-driven:
+
+| Variable | Purpose |
+|----------|---------|
+| `FORMAL_CLAIM_CLI_PATH` | Absolute path to the `formal-claim` CLI binary |
+| `FORMAL_CLAIM_DATA_DIR` | Data directory for projects, claims, and artifacts |
+| `FORMAL_CLAIM_ENDPOINT` | HTTP endpoint for the formal-claim engine API |
+| `FORMAL_CLAIM_REMOTE_URL` | Remote URL when `routing` is set to `remote` |
+
+The formal assurance stack is built across several repositories:
+
+| Repository | Role |
+|------------|------|
+| [orchestration-assurance-engine](https://github.com/nutshells3/orchestration-assurance-engine) | Certification engine, CLI, claim trace, audit pipeline |
+| [fwp](https://github.com/nutshells3/fwp) | Formal verification adapters (Lean, Isabelle, Rocq) |
+| [proof-assistant](https://github.com/nutshells3/proof-assistant) | Proof execution engine |
+| [safeslice](https://github.com/nutshells3/safeslice) | Safe decomposition and slicing for verification targets |
+
+Install and connect:
+
+```bash
+# Install the formal-claim CLI from OAE
+cd orchestration-assurance-engine
+pip install -e services/engine -e apps/cli
+
+# Tell SIEGE where to find it
+export FORMAL_CLAIM_CLI_PATH=$(which formal-claim)
+export FORMAL_CLAIM_DATA_DIR=./formal_claim_data
+
+# Or use the HTTP gateway
+export FORMAL_CLAIM_ENDPOINT=http://localhost:8321
+```
+
 ## Practical note
 
 SIEGE is still useful without any formal-assurance backend enabled.
