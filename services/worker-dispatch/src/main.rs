@@ -131,7 +131,8 @@ async fn dispatch_tick(ctx: &DispatchContext) -> Result<u32, Box<dyn std::error:
     }
 
     // 2. Find tasks that are ready: status=running, no worker-dispatch attempt,
-    //    AND all dependency predecessors are completed
+    //    AND all dependency predecessors are completed.
+    //    FOR UPDATE OF t SKIP LOCKED prevents concurrent ticks from picking the same task.
     let tasks = sqlx::query(
         r#"
         SELECT t.task_id, t.node_id, t.worker_role, t.skill_pack_id,
@@ -147,7 +148,6 @@ async fn dispatch_tick(ctx: &DispatchContext) -> Result<u32, Box<dyn std::error:
                 AND ta.lease_owner = 'worker-dispatch'
           )
           AND NOT EXISTS (
-              -- Check that all predecessor nodes are done
               SELECT 1 FROM node_edges ne
               JOIN nodes pred ON ne.from_node_id = pred.node_id
               WHERE ne.to_node_id = t.node_id
@@ -155,7 +155,6 @@ async fn dispatch_tick(ctx: &DispatchContext) -> Result<u32, Box<dyn std::error:
                 AND pred.lifecycle NOT IN ('admitted', 'done', 'completed')
           )
           AND EXISTS (
-              -- Only dispatch when plan gate is satisfied or overridden
               SELECT 1 FROM plan_gates pg
               JOIN plans p ON pg.plan_id = p.plan_id
               WHERE p.objective_id = n.objective_id
@@ -165,6 +164,7 @@ async fn dispatch_tick(ctx: &DispatchContext) -> Result<u32, Box<dyn std::error:
                     WHERE pg2.plan_id = p.plan_id
                 )
           )
+        FOR UPDATE OF t SKIP LOCKED
         LIMIT $1
         "#,
     )
@@ -392,7 +392,7 @@ async fn execute_task(
             // Record worktree binding event in event journal
             let wt_event_id = Uuid::now_v7().to_string();
             let wt_idem = format!("worktree-bind-{}", task_id);
-            let _ = sqlx::query(
+            if let Err(e) = sqlx::query(
                 "INSERT INTO event_journal \
                      (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at) \
                  VALUES ($1, 'git', $2, 'worktree_bound', $3, $4, now()) \
@@ -409,17 +409,20 @@ async fn execute_task(
                 "trigger": "worktree_acquisition"
             }))
             .execute(pool)
-            .await;
+            .await {
+                tracing::warn!(error = %e, "Failed to record event");
+            }
 
             path
         }
         Err(e) => {
-            tracing::error!(
-                task_id,
-                error = %e,
-                "Failed to acquire workspace, falling back to repo root"
-            );
-            worktree_repo_root.clone()
+            // Fail retryable instead of falling back to repo root — shared-directory
+            // fallback lets concurrent tasks clobber each other.
+            tracing::error!(task_id, error = %e, "Failed to acquire workspace");
+            return Err(format!(
+                "Worktree acquisition failed for task {}: {}",
+                task_id, e
+            ).into());
         }
     };
 
@@ -621,7 +624,7 @@ async fn execute_task(
                 "status": "running",
                 "trigger": "worker_heartbeat"
             });
-            let _ = sqlx::query(
+            if let Err(e) = sqlx::query(
                 "INSERT INTO event_journal \
                      (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at) \
                  VALUES ($1, 'worker', $2, 'worker_status_heartbeat', $3, $4, now()) \
@@ -632,7 +635,9 @@ async fn execute_task(
             .bind(&hb_idem)
             .bind(&hb_payload)
             .execute(&heartbeat_pool)
-            .await;
+            .await {
+                tracing::warn!(error = %e, "Failed to record event");
+            }
         }
     });
 
@@ -897,7 +902,7 @@ async fn execute_task(
         let metric_cycle_id = cycle_id_for_metric.unwrap_or_else(|| "unknown".to_string());
         let metric_id = Uuid::now_v7().to_string();
 
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "INSERT INTO task_metrics \
                  (id, task_id, cycle_id, worker_role, duration_ms, \
                   retry_count, succeeded, failure_category, recorded_at) \
@@ -910,7 +915,9 @@ async fn execute_task(
         .bind(response.duration_ms as i64)
         .bind(attempt_index)
         .execute(pool)
-        .await;
+        .await {
+            tracing::warn!(error = %e, "Failed to record event");
+        }
 
         tracing::info!(
             task_id,
@@ -1095,7 +1102,7 @@ async fn execute_task(
 
                                     // Record conflict detection event in event journal
                                     let conflict_event_id = Uuid::now_v7().to_string();
-                                    let _ = sqlx::query(
+                                    if let Err(e) = sqlx::query(
                                         "INSERT INTO event_journal \
                                              (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at) \
                                          VALUES ($1, 'conflict', $2, 'file_conflict_detected', $3, $4, now()) \
@@ -1114,7 +1121,9 @@ async fn execute_task(
                                         "trigger": "worktree_conflict_detection"
                                     }))
                                     .execute(pool)
-                                    .await;
+                                    .await {
+                                        tracing::warn!(error = %e, "Failed to record event");
+                                    }
                                 }
                             }
                         }
@@ -1148,7 +1157,7 @@ async fn execute_task(
 
             // Record dirty-worktree warning event
             let dirty_event_id = Uuid::now_v7().to_string();
-            let _ = sqlx::query(
+            if let Err(e) = sqlx::query(
                 "INSERT INTO event_journal \
                      (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at) \
                  VALUES ($1, 'git', $2, 'dirty_worktree_detected', $3, $4, now()) \
@@ -1164,7 +1173,9 @@ async fn execute_task(
                 "trigger": "dirty_worktree_detection"
             }))
             .execute(pool)
-            .await;
+            .await {
+                tracing::warn!(error = %e, "Failed to record event");
+            }
 
             false // Do not release
         }
@@ -1194,7 +1205,7 @@ async fn execute_task(
 
         // Record cleanup event
         let cleanup_event_id = Uuid::now_v7().to_string();
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "INSERT INTO event_journal \
                  (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at) \
              VALUES ($1, 'git', $2, 'worktree_released', $3, $4, now()) \
@@ -1209,7 +1220,9 @@ async fn execute_task(
             "trigger": "safe_worktree_cleanup"
         }))
         .execute(pool)
-        .await;
+        .await {
+            tracing::warn!(error = %e, "Failed to record event");
+        }
     }
 
     tracing::info!(

@@ -158,7 +158,7 @@ pub async fn tick(pool: &PgPool, scaling: &ScalingContext) -> Result<u32, Box<dy
             "active_cycles": active_cycles
         });
 
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "INSERT INTO event_journal \
                  (event_id, aggregate_kind, aggregate_id, event_kind, idempotency_key, payload, created_at) \
              VALUES ($1, 'tick_heartbeat', 'loop_runner', 'tick_heartbeat', $2, $3, now()) \
@@ -168,7 +168,9 @@ pub async fn tick(pool: &PgPool, scaling: &ScalingContext) -> Result<u32, Box<dy
         .bind(&hb_idem)
         .bind(&hb_payload)
         .execute(pool)
-        .await;
+        .await {
+            tracing::warn!(error = %e, "Failed to record event");
+        }
 
         tracing::debug!(tick_number = tick_number + 1, active_cycles, "Heartbeat recorded");
     }
