@@ -99,6 +99,23 @@ make demo
 
 ---
 
+## Status
+
+The backend pipeline has been verified end-to-end with real LLM calls (Codex CLI / gpt-5.4) and real formal-claim certification (OAE engine):
+
+```text
+objective → plan gate (10 conditions, completeness 1.0)
+  → decomposition (dependency-aware task graph)
+  → dispatch (parallel, isolated git worktrees)
+  → execution (Codex CLI, multiple tasks succeeded)
+  → certification (formal-claim CLI invoked, results projected)
+  → retry on timeout, heartbeat emission, zero errors
+```
+
+The web dashboard is code-complete (12 panels, generated types, SSE streaming) but has not yet been integration-tested against a live backend. The Tauri desktop shell builds but is untested.
+
+---
+
 ## How it works
 
 ```text
