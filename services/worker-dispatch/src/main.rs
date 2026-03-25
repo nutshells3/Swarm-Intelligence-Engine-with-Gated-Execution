@@ -805,7 +805,11 @@ async fn execute_task(
         }
 
         // ── WRK-011: Store stdout and stderr as separate artifact_refs ──
-        if !response.stdout.is_empty() {
+        // Strip null bytes before storing — PostgreSQL TEXT columns reject 0x00.
+        let clean_stdout = response.stdout.replace('\0', "");
+        let clean_stderr = response.stderr.replace('\0', "");
+
+        if !clean_stdout.is_empty() {
             let stdout_artifact_id = Uuid::now_v7().to_string();
             sqlx::query(
                 "INSERT INTO artifact_refs \
@@ -814,7 +818,7 @@ async fn execute_task(
             )
             .bind(&stdout_artifact_id)
             .bind(task_id)
-            .bind(&response.stdout)
+            .bind(&clean_stdout)
             .bind(serde_json::json!({
                 "adapter": adapter_name,
                 "attempt_id": attempt_id,
@@ -824,7 +828,7 @@ async fn execute_task(
             .await?;
         }
 
-        if !response.stderr.is_empty() {
+        if !clean_stderr.is_empty() {
             let stderr_artifact_id = Uuid::now_v7().to_string();
             sqlx::query(
                 "INSERT INTO artifact_refs \
@@ -833,7 +837,7 @@ async fn execute_task(
             )
             .bind(&stderr_artifact_id)
             .bind(task_id)
-            .bind(&response.stderr)
+            .bind(&clean_stderr)
             .bind(serde_json::json!({
                 "adapter": adapter_name,
                 "attempt_id": attempt_id,

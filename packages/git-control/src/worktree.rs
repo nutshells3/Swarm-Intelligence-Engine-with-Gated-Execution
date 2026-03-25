@@ -49,6 +49,21 @@ impl WorktreeManager {
             .to_str()
             .ok_or_else(|| WorktreeError::IoError("Non-UTF-8 worktree path".to_string()))?;
 
+        // Clean up stale branch/worktree from previous attempts before creating.
+        // This handles retry scenarios where the branch already exists.
+        if worktree_path.exists() {
+            let _ = Command::new("git")
+                .args(["worktree", "remove", worktree_str, "--force"])
+                .current_dir(&self.repo_root)
+                .output()
+                .await;
+        }
+        let _ = Command::new("git")
+            .args(["branch", "-D", &branch_name])
+            .current_dir(&self.repo_root)
+            .output()
+            .await;
+
         // git worktree add .worktrees/task-{id} -b task-{id}
         let output = Command::new("git")
             .args(["worktree", "add", worktree_str, "-b", &branch_name])
