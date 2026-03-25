@@ -1,0 +1,16 @@
+# SIEGE Engine Configuration
+#
+# Scaling tier controls how workers communicate and isolate:
+#   standalone  — PG direct + git worktree (default, single machine)
+#   clustered   — NATS JetStream + pooled worktrees (multi-process)
+#   distributed — NATS + container-ready isolation (multi-machine)
+#
+# Override with env var: SIEGE_SCALING_TIER=clustered
+
+[scaling]
+tier = "standalone"
+max_db_connections = 10
+nats_url = "nats://127.0.0.1:4222"
+worktree_pool_size = 20
+shard_id = 0
+shard_count = 1

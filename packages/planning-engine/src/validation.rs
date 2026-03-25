@@ -374,7 +374,7 @@ mod tests {
                 })
                 .collect(),
             current_status: status,
-            unresolved_question_budget: 2,
+            unresolved_question_budget: 3,
             unresolved_question_count: 0,
             override_reason: None,
             evaluated_at: Utc::now(),

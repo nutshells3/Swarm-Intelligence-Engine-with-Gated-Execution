@@ -185,6 +185,9 @@ async fn meta(
         // Deployment
         routes::deployment::get_deployment_config,
         routes::deployment::update_deployment_config,
+        // Conflicts
+        routes::conflicts::list_conflicts,
+        routes::conflicts::get_conflict,
     ),
     components(schemas(
         HealthResponse,
@@ -287,6 +290,7 @@ async fn meta(
         routes::policies::CertificationSettingsRequest,
         routes::policies::CertificationSettingsResponse,
         routes::policies::CertificationSettingsPayload,
+        routes::conflicts::ConflictResponse,
     ))
 )]
 struct ApiDoc;
@@ -526,6 +530,15 @@ pub async fn build_app(
             "/api/deployment/config",
             get(routes::deployment::get_deployment_config)
                 .patch(routes::deployment::update_deployment_config),
+        )
+        // Conflicts
+        .route(
+            "/api/conflicts",
+            get(routes::conflicts::list_conflicts),
+        )
+        .route(
+            "/api/conflicts/{id}",
+            get(routes::conflicts::get_conflict),
         )
         // Projections
         .route(

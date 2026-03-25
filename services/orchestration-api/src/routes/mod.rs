@@ -1,5 +1,6 @@
 pub mod certification;
 pub mod chat;
+pub mod conflicts;
 pub mod cycles;
 pub mod deployment;
 pub mod event_projections;

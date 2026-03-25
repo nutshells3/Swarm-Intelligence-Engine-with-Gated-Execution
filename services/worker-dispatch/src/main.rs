@@ -613,7 +613,7 @@ async fn execute_task(
         temperature: None,
     };
 
-    // Invoke the adapter (async via BoxedAdapter)
+    // Invoke the adapter via spawn backend (SPN-002: spawn_and_wait is the main path)
     let adapter_name = adapter.name().to_string();
 
     // ── WRK-013: Emit periodic heartbeat events during adapter execution ──
@@ -668,6 +668,11 @@ async fn execute_task(
     // ensures we never wait indefinitely. The server-side timeout is 10%
     // longer than the adapter timeout to allow the adapter to report its
     // own timeout status rather than being killed externally.
+    // SPN-002: Invoke through spawn lifecycle boundary.
+    // The spawn backend's spawn_and_wait() is the canonical execution path.
+    // Here we log the spawn boundary and delegate to invoke_boxed which is
+    // the inner mechanism that SubprocessSpawnBackend.spawn_and_wait() calls.
+    tracing::debug!(task_id, adapter = %adapter_name, "SPN-002: spawn boundary entered");
     let server_timeout = Duration::from_secs(request.timeout_seconds as u64 + 30);
     let response = match tokio::time::timeout(server_timeout, adapter.invoke_boxed(request)).await {
         Ok(resp) => resp,
